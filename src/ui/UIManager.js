@@ -9,6 +9,12 @@ export class UIManager {
             storage_depth: 2,
             picking_stations: 3,
         };
+        
+        // 📊 INITIAL CONFIG LOG - SEND THIS TO ME! 📊
+        console.log("🎛️ === INITIAL UI CONFIGURATION ===");
+        console.log("📋 Default uiConfig:", this.uiConfig);
+        console.log("🏁 === END INITIAL CONFIG ===");
+        
         this.createUI();
         this.updateStorageCapacity();
     }
@@ -65,14 +71,14 @@ export class UIManager {
                     <small>Total storage locations</small>
                 </div>
 
-                <div class="ui-section camera-section">
-                    <h4>Camera Views:</h4>
-                    <div class="camera-buttons">
-                        <button class="camera-btn" data-view="overview">Overview</button>
-                        <button class="camera-btn" data-view="front">Front View</button>
-                        <button class="camera-btn" data-view="side">Side View</button>
-                        <button class="camera-btn" data-view="top">Top View</button>
-                        <button class="camera-btn" data-view="aisle">Aisle View</button>
+                <div class="ui-section animation-section">
+                    <h4>Container Animation:</h4>
+                    <div class="animation-controls">
+                        <button id="start-animation-btn" class="animation-btn">Start Animation</button>
+                        <button id="stop-animation-btn" class="animation-btn secondary">Stop Animation</button>
+                    </div>
+                    <div class="equipment-controls">
+                        <button id="toggle-equipment-btn" class="animation-btn">🤖 Show Equipment</button>
                     </div>
                 </div>
 
@@ -247,18 +253,23 @@ export class UIManager {
                 margin: 10px 0;
             }
             
-            .camera-section {
+            .animation-section {
                 background: #f1faee;
-                border: 2px solid #6e9075;
+                border: 2px solid #93032e;
             }
             
-            .camera-buttons {
+            .camera-buttons, .animation-controls, .equipment-controls {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 8px;
+                margin-bottom: 8px;
             }
             
-            .camera-btn {
+            .equipment-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .camera-btn, .animation-btn {
                 padding: 8px 12px;
                 background: #6e9075;
                 color: #f1faee;
@@ -269,8 +280,24 @@ export class UIManager {
                 transition: background 0.3s;
             }
             
-            .camera-btn:hover {
+            .camera-btn:hover, .animation-btn:hover {
                 background: #93032e;
+            }
+            
+            .animation-btn {
+                background: #93032e;
+            }
+            
+            .animation-btn:hover {
+                background: #6e0520;
+            }
+            
+            .animation-btn.secondary {
+                background: #6e9075;
+            }
+            
+            .animation-btn.secondary:hover {
+                background: #5a735f;
             }
             
             .rebuild-button {
@@ -308,7 +335,7 @@ export class UIManager {
 
         // Rebuild button
         document.getElementById('rebuild-btn').addEventListener('click', () => {
-            this.sceneManager.rebuildWarehouse();
+            this.sceneManager.buildWarehouse(this.getConfig());
         });
 
         // Range inputs
@@ -334,12 +361,32 @@ export class UIManager {
             this.updateLevelInputs();
         });
 
-        // Camera buttons
-        document.querySelectorAll('.camera-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const view = e.target.getAttribute('data-view');
-                this.setCameraView(view);
-            });
+        // Animation buttons
+        document.getElementById('start-animation-btn').addEventListener('click', () => {
+            this.sceneManager.animationManager.startContainerAnimation(this.uiConfig);
+        });
+
+        document.getElementById('stop-animation-btn').addEventListener('click', () => {
+            this.sceneManager.animationManager.stopAnimation();
+        });
+
+        // Equipment toggle button
+        document.getElementById('toggle-equipment-btn').addEventListener('click', () => {
+            const btn = document.getElementById('toggle-equipment-btn');
+            const shuttleGroup = this.sceneManager.animationManager.shuttleGroup;
+            const liftGroup = this.sceneManager.animationManager.liftGroup;
+            
+            if (shuttleGroup.visible) {
+                shuttleGroup.visible = false;
+                liftGroup.visible = false;
+                btn.textContent = '🤖 Show Equipment';
+                btn.classList.add('secondary');
+            } else {
+                shuttleGroup.visible = true;
+                liftGroup.visible = true;
+                btn.textContent = '🚫 Hide Equipment';
+                btn.classList.remove('secondary');
+            }
         });
     }
 

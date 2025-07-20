@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createRacks } from '../components/createRacks.js';
 import { createPrezone } from '../components/createPrezone.js';
 import { createTransporters } from '../components/createTransporters.js';
+import { AnimationManager } from '../animation/AnimationManager.js';
 import { constants } from './constants.js';
 
 export class SceneManager {
@@ -12,6 +13,7 @@ export class SceneManager {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.controls = null;
         this.warehouseGroup = new THREE.Group();
+        this.animationManager = new AnimationManager(this);
         this.scene.add(this.warehouseGroup);
     }
 
@@ -141,6 +143,26 @@ export class SceneManager {
         const center = box.getCenter(new THREE.Vector3());
         this.warehouseGroup.position.x += (this.warehouseGroup.position.x - center.x);
         this.warehouseGroup.position.z += (this.warehouseGroup.position.z - center.z);
+        
+        // 🏗️ WAREHOUSE STRUCTURE LOGS - SEND THESE TO ME! 🏗️
+        console.log("🏭 === WAREHOUSE STRUCTURE ANALYSIS ===");
+        console.log("📏 Constants used:", constants);
+        console.log("📋 uiConfig:", uiConfig);
+        console.log("📐 Calculated warehouse dimensions:");
+        console.log("  - moduleLength:", uiConfig.locations_per_module * constants.locationLength);
+        console.log("  - totalRackDepth:", uiConfig.storage_depth * constants.locationDepth);
+        console.log("  - rackAndAisleWidth:", (uiConfig.storage_depth * constants.locationDepth * 2) + constants.aisleWidth);
+        console.log("🏗️ Component positions:");
+        console.log("  - Racks position:", racks.position);
+        console.log("  - Prezone position:", prezone.position);
+        console.log("  - Transporters position:", transporters.position);
+        console.log("📦 Warehouse bounding box:", box);
+        console.log("📍 Warehouse center:", center);
+        console.log("🎯 Final warehouse group position:", this.warehouseGroup.position);
+        console.log("🏁 === END WAREHOUSE STRUCTURE ===");
+        
+        // 🤖 CREATE ANIMATED EQUIPMENT AFTER WAREHOUSE IS BUILT
+        this.animationManager.createAnimatedEquipment(uiConfig);
         
         console.log('Warehouse built successfully');
         console.log('Warehouse group position:', this.warehouseGroup.position);

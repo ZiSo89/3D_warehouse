@@ -1,101 +1,608 @@
 import * as THREE from 'three';
-import { Container } from './Container.js';
-import { CoordinatedOperations } from './CoordinatedOperations.js';
 
 export class AnimationManager {
-    constructor(sceneManager) {
+    constructor(sceneManager, uiConfig) {
+        // ...existing code...
         this.sceneManager = sceneManager;
         this.scene = sceneManager.scene;
         this.warehouseGroup = sceneManager.warehouseGroup;
-        
         // Animation state
         this.isPlaying = false;
-        this.speed = 1.0;
-        this.clock = new THREE.Clock();
-        
-        // Container management
-        this.containers = new Map(); // ID -> Container
-        this.containerPool = []; // Reusable containers
-        this.activeAnimations = new Set();
-        this.operationQueue = [];
-        
-        // Animation groups for organization
+        this.animationContainer = null;
+        this.isAnimating = false;
+        this.tweenJs = null;
+        // Animation groups for shuttles and lifts
         this.shuttleGroup = new THREE.Group();
         this.shuttleGroup.name = 'ShuttleGroup';
         this.liftGroup = new THREE.Group();
         this.liftGroup.name = 'LiftGroup';
-        this.conveyorGroup = new THREE.Group();
-        this.conveyorGroup.name = 'ConveyorGroup';
-
-        // Ensure groups are added to warehouse group
-        if (!this.warehouseGroup.children.includes(this.shuttleGroup)) {
-            this.warehouseGroup.add(this.shuttleGroup);
-        }
-        if (!this.warehouseGroup.children.includes(this.liftGroup)) {
-            this.warehouseGroup.add(this.liftGroup);
-        }
-        if (!this.warehouseGroup.children.includes(this.conveyorGroup)) {
-            this.warehouseGroup.add(this.conveyorGroup);
-        }
-        
-        // Warehouse configuration (will be set by buildAnimationSystem)
-        this.warehouseConfig = null;
-        this.shuttles = new Map(); // aisleId_level -> shuttle mesh
-        this.lifts = new Map(); // aisleId -> lift mesh
-        
-        // Coordinated operations only
-        this.coordinatedOperations = new CoordinatedOperations(this);
-        
-        this.init();
+        // Maps to store shuttles and lifts
+        this.shuttles = new Map();
+        this.lifts = new Map();
+        this.loadTween();
     }
 
-    init() {
-        this.createAnimationControls();
-        console.log('AnimationManager initialized');
+    async loadTween() {
+        if (typeof window.TWEEN === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js';
+            document.head.appendChild(script);
+            
+            return new Promise((resolve) => {
+                script.onload = () => {
+                    this.tweenJs = window.TWEEN;
+                    resolve();
+                };
+            });
+        } else {
+            this.tweenJs = window.TWEEN;
+        }
     }
 
-    buildAnimationSystem(warehouseConfig) {
-        this.warehouseConfig = warehouseConfig;
-        console.log('Building animation system for warehouse config:', warehouseConfig);
-        
-        // Ensure animation groups are properly connected to scene
-        if (!this.warehouseGroup.children.includes(this.shuttleGroup)) {
-            this.warehouseGroup.add(this.shuttleGroup);
+    createAnimationContainer() {
+        if (this.animationContainer) {
+            this.scene.remove(this.animationContainer);
         }
-        if (!this.warehouseGroup.children.includes(this.liftGroup)) {
-            this.warehouseGroup.add(this.liftGroup);
-        }
-        if (!this.warehouseGroup.children.includes(this.conveyorGroup)) {
-            this.warehouseGroup.add(this.conveyorGroup);
-        }
+
+        const containerGeo = new THREE.BoxGeometry(0.5, 0.3, 0.8);
+        const containerMat = new THREE.MeshStandardMaterial({ 
+            color: 0x3b82f6,
+            metalness: 0.3,
+            roughness: 0.7
+        });
         
-        // Clear existing animations
-        this.stop();
-        this.clearAllAnimations();
+        this.animationContainer = new THREE.Mesh(containerGeo, containerMat);
+        this.animationContainer.castShadow = true;
+        this.scene.add(this.animationContainer);
         
-        // Create animated shuttles and lifts with simple positioning
-        this.createAnimatedShuttles();
-        this.createAnimatedLifts();
-        this.createAnimatedConveyors();
-        
-        console.log('Animation system built successfully');
-        console.log('Lifts created:', Array.from(this.lifts.keys()));
-        console.log('Shuttles created:', Array.from(this.shuttles.keys()));
+        return this.animationContainer;
     }
 
-    createAnimatedShuttles() {
-        // Find existing rack structures to position shuttles correctly
-        const rackGroups = [];
-        this.warehouseGroup.traverse(child => {
-            if (child.name && child.name.includes('rack')) {
-                rackGroups.push(child);
+    async startContainerAnimation(uiConfig) {
+        if (this.isAnimating) {
+            this.stopAnimation();
+        }
+
+        if (!this.tweenJs) {
+            await this.loadTween();
+        }
+
+        this.isAnimating = true;
+        this.createAnimationContainer();
+
+        // Use correct constants for positioning (matching the warehouse layout)
+        const moduleLength = uiConfig.locations_per_module * 1.2; // constants.locationLength
+        const totalRackDepth = uiConfig.storage_depth * 0.8; // constants.locationDepth
+        const rackAndAisleWidth = (totalRackDepth * 2) + 2.5; // constants.aisleWidth
+        const prezoneOffset = totalRackDepth + 5; // Distance from racks to prezone
+
+        // Get warehouse group offset
+        const warehouseOffset = this.warehouseGroup.position;
+
+        // Calculate positions based on actual warehouse structure
+        const targetAisle = Math.floor(uiConfig.aisles / 2);
+        const aisleCenterX = targetAisle * rackAndAisleWidth + totalRackDepth + 1.25 + warehouseOffset.x;
+        const startModuleZ = Math.floor(uiConfig.modules_per_aisle / 2) * moduleLength;
+        const prezoneZ = -prezoneOffset + warehouseOffset.z;
+
+        console.log("🏭 === WAREHOUSE CALCULATIONS ===");
+        console.log(`📏 Prezone offset: ${prezoneOffset.toFixed(2)}`);
+        console.log(`📏 Warehouse offset: X=${warehouseOffset.x.toFixed(2)}, Z=${warehouseOffset.z.toFixed(2)}`);
+        console.log(`📏 Prezone Z position: ${prezoneZ.toFixed(2)}`);
+
+        // Starting position (picking station in prezone) - FIXED CALCULATION
+        const stationWidth = 2.5;
+        const totalPrezoneWidth = uiConfig.picking_stations * (stationWidth + 1);
+        const startStationIndex = 1; // Use middle picking station
+        const startPos = { 
+            x: startStationIndex * (stationWidth + 1) - totalPrezoneWidth / 2 + stationWidth / 2 + warehouseOffset.x,
+            y: 1.15, // conveyorHeight + container height
+            z: prezoneZ 
+        };
+
+        console.log("� === EQUIPMENT ALIGNMENT ANALYSIS ===");
+        this.logEquipmentPositions(uiConfig, warehouseOffset, targetAisle, aisleCenterX);
+
+        this.animationContainer.position.set(startPos.x, startPos.y, startPos.z);
+
+        // Use existing calculations and update target settings
+        const targetLevel = 0; // First level
+        const levelY = (targetLevel * 1.0) + (1.0 / 2); // EXACT shuttle Y calculation
+        
+        // EXACT lift position (from createLifts method) - using targetAisle=0 for simplicity
+        const liftX = 0 * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
+        const liftZ = 0.5 + warehouseOffset.z;
+        
+        // EXACT shuttle position (from createShuttles method)  
+        const shuttleX = 0 * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
+        const shuttleZ = 5 + warehouseOffset.z;
+
+        // Module calculations for target position
+        const targetModule = 3;
+        const targetModuleZ = targetModule * moduleLength + moduleLength / 2 + warehouseOffset.z;
+
+        // Use EXACT equipment positions for animation
+        this.executeAnimationWithEquipmentPositions(uiConfig, {
+            warehouseOffset,
+            liftX,
+            liftZ,
+            shuttleX,
+            shuttleZ,
+            startPos,
+            levelY,
+            targetModuleZ
+        });
+    }
+
+    executeAnimationWithEquipmentPositions(uiConfig, positions) {
+
+        const { warehouseOffset, liftX, liftZ, shuttleX, shuttleZ, startPos, levelY, targetModuleZ } = positions;
+
+        // STEP 1: Move from picking station to cross-conveyor (Y should be on conveyor)
+        const conveyorY = 0.85; // Standard conveyor height
+        const crossConveyorZ = 1 + warehouseOffset.z;
+
+
+
+        // STEP 1: Move a bit forward from picking station (Z direction)
+        const frontOffset = 1.0; // Move 1 unit forward
+        const stepFront = {
+            x: startPos.x,
+            y: conveyorY,
+            z: startPos.z + frontOffset
+        };
+
+        // STEP 2: Move left (X direction) to align with lift (Z stays at new front position)
+        const stepLeft = {
+            x: liftX,
+            y: conveyorY,
+            z: startPos.z + frontOffset
+        };
+
+        // STEP 3: Move straight (Z direction) to the cross-conveyor/lift (X stays)
+        const stepCrossConveyor = {
+            x: liftX,
+            y: conveyorY,
+            z: crossConveyorZ
+        };
+
+        // STEP 4: Move straight (Z direction) to the lift (X stays)
+        const stepLift = {
+            x: liftX,
+            y: conveyorY,
+            z: liftZ
+        };
+
+        // STEP 4: Lift up to a higher level (e.g., level 3)
+        // Use higherLevelY for the lift and container
+        const higherLevelY = 2.5; // Change this value for desired lift height
+        const step4 = {
+            x: liftX,
+            y: higherLevelY,
+            z: liftZ
+        };
+
+        // STEP 5: Shuttle from the same level moves to lift to pick up container
+        // Find the shuttle at the same aisle and at higherLevelY
+        let activeShuttle = null;
+        for (const shuttle of this.shuttles.values()) {
+            if (
+                Math.abs(shuttle.position.x - liftX) < 0.1 &&
+                Math.abs(shuttle.position.y - higherLevelY) < 0.1
+            ) {
+                activeShuttle = shuttle;
+                break;
             }
+        }
+
+        const step5 = {
+            x: liftX,
+            y: higherLevelY,
+            z: liftZ
+        };
+
+        // STEP 6: Shuttle carries container to target module
+        const step6 = {
+            x: shuttleX,
+            y: higherLevelY,
+            z: targetModuleZ
+        };
+
+        // STEP 7: Place in rack storage
+        const storageX = shuttleX - (uiConfig.storage_depth * 0.8 * 0.7);
+        const step7 = {
+            x: storageX,
+            y: higherLevelY,
+            z: targetModuleZ
+        };
+
+        console.log("🎬 === CONTAINER POSITION TRACKING ===");
+        console.log(`📦 START Position: X=${startPos.x.toFixed(2)}, Y=${startPos.y.toFixed(2)}, Z=${startPos.z.toFixed(2)}`);
+        console.log(`📦 STEP 1 - Front: X=${stepFront.x.toFixed(2)}, Y=${stepFront.y.toFixed(2)}, Z=${stepFront.z.toFixed(2)}`);
+        console.log(`📦 STEP 2 - Left: X=${stepLeft.x.toFixed(2)}, Y=${stepLeft.y.toFixed(2)}, Z=${stepLeft.z.toFixed(2)}`);
+        console.log(`📦 STEP 3 - Cross-Conveyor: X=${stepCrossConveyor.x.toFixed(2)}, Y=${stepCrossConveyor.y.toFixed(2)}, Z=${stepCrossConveyor.z.toFixed(2)}`);
+        console.log(`📦 STEP 4 - Lift: X=${stepLift.x.toFixed(2)}, Y=${stepLift.y.toFixed(2)}, Z=${stepLift.z.toFixed(2)}`);
+        console.log(`📦 STEP 5 - Lift Up: X=${step4.x.toFixed(2)}, Y=${step4.y.toFixed(2)}, Z=${step4.z.toFixed(2)}`);
+        console.log(`📦 STEP 6 - Shuttle Pickup: X=${step5.x.toFixed(2)}, Y=${step5.y.toFixed(2)}, Z=${step5.z.toFixed(2)}`);
+        console.log(`📦 STEP 7 - Shuttle Move: X=${step6.x.toFixed(2)}, Y=${step6.y.toFixed(2)}, Z=${step6.z.toFixed(2)}`);
+        console.log(`📦 STEP 8 - Storage: X=${step7.x.toFixed(2)}, Y=${step7.y.toFixed(2)}, Z=${step7.z.toFixed(2)}`);
+
+        // Log equipment positions for comparison
+        console.log("🏗️ === EQUIPMENT POSITIONS ===");
+        console.log(`🏗️ Lift Position: X=${liftX.toFixed(2)}, Y=1.0, Z=${liftZ.toFixed(2)}`);
+        console.log(`🚛 Shuttle Position: X=${shuttleX.toFixed(2)}, Y=${levelY.toFixed(2)}, Z=${shuttleZ.toFixed(2)}`);
+
+        // Find the lift and shuttle that need to move
+
+        const activeLift = Array.from(this.lifts.values()).find(lift =>
+            Math.abs(lift.position.x - liftX) < 0.1 && Math.abs(lift.position.z - liftZ) < 0.1
+        );
+
+        console.log("🏗️ Equipment for animation:", {
+            activeLift: activeLift ? "FOUND" : "NOT FOUND",
+            activeShuttle: activeShuttle ? "FOUND" : "NOT FOUND"
         });
 
-        // Create shuttles based on warehouse config
-        for (let a = 0; a < this.warehouseConfig.aisles; a++) {
-            const levels = this.warehouseConfig.levels_per_aisle[a];
+        // Create tweens with position logging
+
+        // Define steps array for dynamic tween creation
+        const steps = [
+            { name: 'Front', to: stepFront, duration: 1000 },
+            { name: 'Left', to: stepLeft, duration: 1200 },
+            { name: 'CrossConveyor', to: stepCrossConveyor, duration: 2000 },
+            { name: 'Lift', to: stepLift, duration: 1800 },
+            { name: 'LiftUp', to: step4, duration: 2200 },
+            { name: 'ShuttlePickup', to: step5, duration: 1500 },
+            { name: 'ShuttleMove', to: step6, duration: 3200 },
+            { name: 'Storage', to: step7, duration: 1500 }
+        ];
+
+        // Create tweens dynamically and chain them
+
+        let prevTween = null;
+        const tweens = [];
+        let tweenLiftUpLift = null;
+        let tween5Shuttle = null;
+        let tween6Shuttle = null;
+        steps.forEach((step, idx) => {
+            let easingFn = this.tweenJs.Easing.Quadratic.InOut;
+            if (step.name === 'LiftUp') easingFn = this.tweenJs.Easing.Sinusoidal.InOut;
+            if (step.name === 'Storage') easingFn = this.tweenJs.Easing.Quadratic.Out;
+
+            // STEP 4: LiftUp - animate lift and container together
+            if (step.name === 'LiftUp' && activeLift) {
+                tweenLiftUpLift = new this.tweenJs.Tween(activeLift.position)
+                    .to({ x: liftX, y: higherLevelY, z: liftZ }, step.duration)
+                    .easing(this.tweenJs.Easing.Sinusoidal.InOut)
+                    .onUpdate(() => {
+                        const pos = activeLift.position;
+                        console.log(`🔄 LIFT Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    })
+                    .onComplete(() => {
+                        const pos = activeLift.position;
+                        console.log(`🏗️ LIFT Complete: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    });
+            }
+
+            // STEP 5: ShuttlePickup - animate shuttle moving to lift
+            if (step.name === 'ShuttlePickup' && activeShuttle) {
+                tween5Shuttle = new this.tweenJs.Tween(activeShuttle.position)
+                    .to({ x: liftX, y: higherLevelY, z: liftZ }, step.duration)
+                    .easing(this.tweenJs.Easing.Quadratic.InOut)
+                    .onUpdate(() => {
+                        const pos = activeShuttle.position;
+                        console.log(`🔄 SHUTTLE STEP 5 Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    })
+                    .onComplete(() => {
+                        const pos = activeShuttle.position;
+                        console.log(`🚀 SHUTTLE picked up container: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    });
+            }
+
+            // STEP 6: ShuttleMove - animate shuttle and container together
+            if (step.name === 'ShuttleMove' && activeShuttle) {
+                tween6Shuttle = new this.tweenJs.Tween(activeShuttle.position)
+                    .to({ x: shuttleX, y: higherLevelY, z: targetModuleZ }, step.duration)
+                    .easing(this.tweenJs.Easing.Quadratic.InOut)
+                    .onUpdate(() => {
+                        const pos = activeShuttle.position;
+                        console.log(`� SHUTTLE Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    })
+                    .onComplete(() => {
+                        const pos = activeShuttle.position;
+                        console.log(`🚀 SHUTTLE Complete: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    });
+            }
+
+            const tween = new this.tweenJs.Tween(this.animationContainer.position)
+                .to(step.to, step.duration)
+                .easing(easingFn)
+                .onUpdate(() => {
+                    const pos = this.animationContainer.position;
+                    console.log(`🔄 STEP ${idx + 1} (${step.name}) Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                })
+                .onComplete(() => {
+                    const pos = this.animationContainer.position;
+                    console.log(`✅ STEP ${idx + 1} (${step.name}) Complete: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                });
+            tweens.push(tween);
+            if (prevTween) prevTween.chain(tween);
+            prevTween = tween;
+        });
+
+        // Final step: Place in storage
+        tweens[tweens.length - 1].onComplete(() => {
+            const pos = this.animationContainer.position;
+            console.log(`✅ STEP ${tweens.length} (Storage) STORED: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+            console.log("🎉 === ANIMATION COMPLETED ===");
+            this.isAnimating = false;
+        });
+
+        // Start animation sequence
+        tweens[0].start();
+
+        // STEP 4: Start lift up with container
+        if (tweenLiftUpLift) {
+            tweens[4].onStart(() => {
+                setTimeout(() => tweenLiftUpLift.start(), 0);
+            });
+        }
+
+        // STEP 5: Start shuttle pickup with container
+        if (tween5Shuttle) {
+            tweens[5].onStart(() => {
+                setTimeout(() => tween5Shuttle.start(), 0);
+            });
+        }
+
+        // STEP 6: Start shuttle move with container
+        if (tween6Shuttle) {
+            tweens[6].onStart(() => {
+                setTimeout(() => tween6Shuttle.start(), 0);
+            });
+        }
+    }
+
+    logEquipmentPositions(uiConfig, warehouseOffset, targetAisle, aisleCenterX, prezoneOffset) {
+        console.log("📍 === EQUIPMENT POSITIONS FOR ALIGNMENT CHECK ===");
+        
+        // Log Picking Stations (from prezone) - FIXED CALCULATION
+        const stationWidth = 2.5;
+        const totalPrezoneWidth = uiConfig.picking_stations * (stationWidth + 1);
+        for (let i = 0; i < uiConfig.picking_stations; i++) {
+            const stationX = i * (stationWidth + 1) - totalPrezoneWidth / 2 + stationWidth / 2 + warehouseOffset.x;
+            console.log(`🏪 Picking Station ${i + 1}: X=${stationX.toFixed(2)}, Z=${(-prezoneOffset + warehouseOffset.z).toFixed(2)}`);
+        }
+
+        // Log Cross-Conveyor position
+        const crossConveyorZ = 1 + warehouseOffset.z;
+        console.log(`🚚 Cross-Conveyor: Z=${crossConveyorZ.toFixed(2)} (at conveyor start)`);
+
+        // Log Main Conveyors
+        const rackAndAisleWidth = (uiConfig.storage_depth * 0.8 * 2) + 2.5;
+        const totalRackDepth = uiConfig.storage_depth * 0.8;
+        const conveyorLength = totalRackDepth + 5;
+        
+        for (let a = 0; a < uiConfig.aisles; a++) {
+            const conveyorX = a * rackAndAisleWidth + totalRackDepth + 1.25 + warehouseOffset.x;
+            const conveyorStartZ = 1 + warehouseOffset.z;
+            const conveyorEndZ = conveyorLength + 1 + warehouseOffset.z;
+            console.log(`🛤️ Aisle ${a + 1} Conveyor: X=${conveyorX.toFixed(2)}, Z=${conveyorStartZ.toFixed(2)} to ${conveyorEndZ.toFixed(2)}`);
+        }
+
+        // Log Lifts
+        for (let a = 0; a < uiConfig.aisles; a++) {
+            const liftX = a * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
+            const liftZ = 0.5 + warehouseOffset.z;
+            console.log(`🏗️ Lift ${a + 1}: X=${liftX.toFixed(2)}, Y=1.0, Z=${liftZ.toFixed(2)}`);
+        }
+
+        // Log Shuttles for target aisle
+        const shuttleX = targetAisle * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
+        const shuttleZ = 5 + warehouseOffset.z;
+        const levels = uiConfig.levels_per_aisle[targetAisle];
+        
+        for (let l = 0; l < Math.min(levels, 3); l++) {
+            const levelY = (l * 1.0) + (1.0 / 2);
+            console.log(`🚛 Aisle ${targetAisle + 1} Shuttle Level ${l + 1}: X=${shuttleX.toFixed(2)}, Y=${levelY.toFixed(2)}, Z=${shuttleZ.toFixed(2)}`);
+        }
+
+        // Log Container Target Points
+        console.log("📦 === CONTAINER ANIMATION TARGETS ===");
+        console.log(`📍 Target Aisle: ${targetAisle + 1}`);
+        console.log(`📍 Aisle Center X: ${aisleCenterX.toFixed(2)}`);
+        console.log(`📍 Expected Lift Position: X=${aisleCenterX.toFixed(2)}, Z=0.5`);
+        console.log(`📍 Expected Shuttle Position: X=${aisleCenterX.toFixed(2)}, Z=5.0`);
+        
+        console.log("🔍 === ALIGNMENT VERIFICATION ===");
+        // Check if container targets match equipment positions
+        const expectedLiftX = targetAisle * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
+        const alignmentCheck = Math.abs(aisleCenterX - expectedLiftX) < 0.1;
+        console.log(`✅ Container X alignment with equipment: ${alignmentCheck ? 'ALIGNED' : 'MISALIGNED'}`);
+        console.log(`📏 Container X: ${aisleCenterX.toFixed(2)} vs Equipment X: ${expectedLiftX.toFixed(2)}`);
+    }
+
+    executeAnimationSequence(uiConfig, dimensions) {
+        const { targetAisle, aisleCenterX, startModuleZ, prezoneZ, moduleLength, totalRackDepth, warehouseOffset } = dimensions;
+
+        // STEP 1: Move from picking station to conveyor (behind picking station)
+        const step1 = { 
+            x: 0 + warehouseOffset.x, 
+            y: 1.15, 
+            z: prezoneZ + 2 // Move behind picking station to conveyor
+        };
+
+        // STEP 2: Move along cross-conveyor to correct aisle
+        const step2 = { 
+            x: aisleCenterX, 
+            y: 1.15, 
+            z: prezoneZ + 2 // Stay on conveyor level
+        };
+
+        // STEP 3: Move towards lift (where conveyors end)
+        const liftZ = 0.5 + warehouseOffset.z; // Lift position we set earlier
+        const step3 = { 
+            x: aisleCenterX, 
+            y: 1.15, 
+            z: liftZ // Move to lift position
+        };
+
+        // STEP 4: Lift up to target level
+        const targetLevel = Math.min(Math.floor(uiConfig.levels_per_aisle[targetAisle] * 0.6), 3) || 1;
+        const levelY = (targetLevel * 1.0) + (1.0 / 2); // Match shuttle height calculation
+        const step4 = { 
+            x: aisleCenterX, 
+            y: levelY, 
+            z: liftZ // Lift up at same position
+        };
+
+        // STEP 5: Transfer to shuttle (move into aisle)
+        const shuttleZ = 5 + warehouseOffset.z; // Shuttle position we set earlier
+        const step5 = { 
+            x: aisleCenterX, 
+            y: levelY, 
+            z: shuttleZ // Move to shuttle
+        };
+
+        // STEP 6: Shuttle moves to target module
+        const targetModule = Math.floor(uiConfig.modules_per_aisle * 0.7);
+        const targetModuleZ = targetModule * moduleLength + moduleLength / 2 + warehouseOffset.z;
+        const step6 = { 
+            x: aisleCenterX, 
+            y: levelY, 
+            z: targetModuleZ // Shuttle along aisle
+        };
+
+        // STEP 7: Place in rack (extend into storage)
+        const rackX = aisleCenterX - (totalRackDepth * 0.7); // Into rack
+        const step7 = { 
+            x: rackX, 
+            y: levelY, 
+            z: targetModuleZ // Final storage position
+        };
+
+        console.log("🎬 === CONTAINER ANIMATION SEQUENCE ===");
+        console.log(`📦 STEP 1 - To Conveyor: X=${step1.x.toFixed(2)}, Y=${step1.y.toFixed(2)}, Z=${step1.z.toFixed(2)}`);
+        console.log(`� STEP 2 - To Aisle: X=${step2.x.toFixed(2)}, Y=${step2.y.toFixed(2)}, Z=${step2.z.toFixed(2)}`);
+        console.log(`📦 STEP 3 - To Lift: X=${step3.x.toFixed(2)}, Y=${step3.y.toFixed(2)}, Z=${step3.z.toFixed(2)}`);
+        console.log(`� STEP 4 - Lift Up: X=${step4.x.toFixed(2)}, Y=${step4.y.toFixed(2)}, Z=${step4.z.toFixed(2)}`);
+        console.log(`� STEP 5 - To Shuttle: X=${step5.x.toFixed(2)}, Y=${step5.y.toFixed(2)}, Z=${step5.z.toFixed(2)}`);
+        console.log(`� STEP 6 - Along Aisle: X=${step6.x.toFixed(2)}, Y=${step6.y.toFixed(2)}, Z=${step6.z.toFixed(2)}`);
+        console.log(`📦 STEP 7 - To Storage: X=${step7.x.toFixed(2)}, Y=${step7.y.toFixed(2)}, Z=${step7.z.toFixed(2)}`);
+
+        // Create tweens with minimal logging
+        const tween1 = new this.tweenJs.Tween(this.animationContainer.position)
+            .to(step1, 2000)
+            .easing(this.tweenJs.Easing.Quadratic.InOut)
+            .onComplete(() => console.log("✅ STEP 1: At conveyor"));
+
+        const tween2 = new this.tweenJs.Tween(this.animationContainer.position)
+            .to(step2, 2500)
+            .easing(this.tweenJs.Easing.Quadratic.InOut)
+            .onComplete(() => console.log("✅ STEP 2: At aisle conveyor"));
+
+        const tween3 = new this.tweenJs.Tween(this.animationContainer.position)
+            .to(step3, 1800)
+            .easing(this.tweenJs.Easing.Quadratic.InOut)
+            .onComplete(() => console.log("✅ STEP 3: At lift"));
+
+        const tween4 = new this.tweenJs.Tween(this.animationContainer.position)
+            .to(step4, 2200)
+            .easing(this.tweenJs.Easing.Sinusoidal.InOut)
+            .onComplete(() => console.log("✅ STEP 4: Lifted up"));
+
+        const tween5 = new this.tweenJs.Tween(this.animationContainer.position)
+            .to(step5, 1500)
+            .easing(this.tweenJs.Easing.Quadratic.InOut)
+            .onComplete(() => console.log("✅ STEP 5: On shuttle"));
+
+        const tween6 = new this.tweenJs.Tween(this.animationContainer.position)
+            .to(step6, 3200)
+            .easing(this.tweenJs.Easing.Quadratic.InOut)
+            .onComplete(() => console.log("✅ STEP 6: At target module"));
+
+        const tween7 = new this.tweenJs.Tween(this.animationContainer.position)
+            .to(step7, 1500)
+            .easing(this.tweenJs.Easing.Quadratic.Out)
+            .onComplete(() => {
+                console.log("✅ STEP 7: STORED!");
+                console.log("🎉 === ANIMATION COMPLETED ===");
+                this.isAnimating = false;
+            });
+
+        // Chain the tweens
+        tween1.chain(tween2);
+        tween2.chain(tween3);
+        tween3.chain(tween4);
+        tween4.chain(tween5);
+        tween5.chain(tween6);
+        tween6.chain(tween7);
+
+        // Start animation
+        tween1.start();
+    }
+
+    stopAnimation() {
+        if (this.tweenJs) {
+            this.tweenJs.removeAll();
+        }
+        
+        if (this.animationContainer) {
+            this.scene.remove(this.animationContainer);
+            this.animationContainer = null;
+        }
+        
+        this.isAnimating = false;
+        console.log("Animation stopped!");
+    }
+
+    update() {
+        if (this.tweenJs && this.isAnimating) {
+            this.tweenJs.update();
+        }
+    }
+
+    // Create animated shuttles and lifts for the warehouse
+    createAnimatedEquipment(uiConfig) {
+        console.log("🤖 Creating animated shuttles and lifts...");
+        
+        // Clear existing equipment
+        this.shuttles.clear();
+        this.lifts.clear();
+        
+        // Remove old groups from scene
+        this.scene.remove(this.shuttleGroup);
+        this.scene.remove(this.liftGroup);
+        
+        // Create new groups
+        this.shuttleGroup = new THREE.Group();
+        this.shuttleGroup.name = 'ShuttleGroup';
+        this.liftGroup = new THREE.Group();
+        this.liftGroup.name = 'LiftGroup';
+        
+        // Get warehouse offset
+        const warehouseOffset = this.warehouseGroup.position;
+        
+        // Create shuttles for each aisle and level
+        this.createShuttles(uiConfig, warehouseOffset);
+        
+        // Create lifts for each aisle
+        this.createLifts(uiConfig, warehouseOffset);
+        
+        // Add groups to scene
+        this.scene.add(this.shuttleGroup);
+        this.scene.add(this.liftGroup);
+        
+        console.log(`🤖 Created ${this.shuttles.size} shuttles and ${this.lifts.size} lifts`);
+    }
+
+    createShuttles(uiConfig, warehouseOffset) {
+        const rackAndAisleWidth = (uiConfig.storage_depth * 0.8 * 2) + 2.5; // constants calculation
+        
+        for (let a = 0; a < uiConfig.aisles; a++) {
+            const levels = uiConfig.levels_per_aisle[a];
             
+            // Create shuttle for EVERY level (removed the limit)
             for (let l = 0; l < levels; l++) {
                 const shuttleId = `${a}_${l}`;
                 
@@ -112,11 +619,10 @@ export class AnimationManager {
                 shuttle.castShadow = true;
                 shuttle.receiveShadow = true;
                 
-                // Position shuttle inside the aisle at proper level
-                // Use simple positioning that works with the existing warehouse layout
-                const aisleX = -5 + (a * 8); // Simple X spacing between aisles
-                const levelY = 1.5 + (l * 2.5); // Level height
-                const shuttleZ = 5; // Inside the aisle area
+                // Position shuttle in the aisle
+                const aisleX = a * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
+                const levelY = (l * 1.0) + (1.0 / 2); // Match rack level positioning: l * levelHeight + levelHeight/2
+                const shuttleZ = 5 + warehouseOffset.z;
                 
                 shuttle.position.set(aisleX, levelY, shuttleZ);
                 shuttle.userData = {
@@ -130,20 +636,19 @@ export class AnimationManager {
                     speed: 2.0
                 };
                 
-                this.shuttleGroup.add(shuttle);
                 shuttle.name = `Shuttle_${a}_${l}`;
+                this.shuttleGroup.add(shuttle);
                 this.shuttles.set(shuttleId, shuttle);
                 
-                console.log(`Created shuttle ${shuttleId} at position:`, shuttle.position);
+                console.log(`🚛 Created shuttle ${shuttleId} at level ${l + 1} (Y=${levelY.toFixed(2)}) position:`, shuttle.position);
             }
         }
     }
 
-    createAnimatedLifts() {
-        // Create only 3 lifts positioned in the prezone area
-        const maxLifts = 3;
+    createLifts(uiConfig, warehouseOffset) {
+        const rackAndAisleWidth = (uiConfig.storage_depth * 0.8 * 2) + 2.5;
         
-        for (let a = 0; a < maxLifts; a++) {
+        for (let a = 0; a < uiConfig.aisles; a++) {
             const liftId = `lift_${a}`;
             
             // Create lift mesh
@@ -159,10 +664,10 @@ export class AnimationManager {
             lift.castShadow = true;
             lift.receiveShadow = true;
             
-            // Position lifts in prezone area with simple, working coordinates
-            const liftX = -5 + (a * 8); // Align with aisles
+            // Position lift CLOSE TO PREZONE, before OSR (negative Z direction)
+            const liftX = a * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
             const liftY = 1.0;
-            const liftZ = -15; // In prezone area
+            const liftZ = 0.5 + warehouseOffset.z; // CLOSE to prezone, before OSR starts
             
             lift.position.set(liftX, liftY, liftZ);
             lift.userData = {
@@ -176,349 +681,11 @@ export class AnimationManager {
                 currentLevel: 0
             };
             
-            this.liftGroup.add(lift);
             lift.name = `Lift_${a}`;
+            this.liftGroup.add(lift);
             this.lifts.set(liftId, lift);
             
-            console.log(`Created lift ${liftId} at position:`, lift.position);
+            console.log(`🏗️ Created lift ${liftId} at PREZONE position (Z=0.5):`, lift.position);
         }
-    }
-
-    createAnimatedConveyors() {
-        // Add animated elements to existing conveyor system
-        // This will be enhanced in later steps
-        console.log('Conveyor animation system ready');
-    }
-
-    createContainer(id, type = 'standard') {
-        let container;
-        
-        // Try to reuse from pool
-        if (this.containerPool.length > 0) {
-            container = this.containerPool.pop();
-            container.reset(id, type);
-        } else {
-            container = new Container(id, type);
-            this.scene.add(container.mesh);
-        }
-        
-        this.containers.set(id, container);
-        return container;
-    }
-
-    removeContainer(id) {
-        const container = this.containers.get(id);
-        if (container) {
-            this.containers.delete(id);
-            container.hide();
-            this.containerPool.push(container); // Return to pool
-        }
-    }
-
-    // Animation Control Methods
-    play() {
-        this.isPlaying = true;
-        this.clock.start();
-        console.log('Animation system started');
-    }
-
-    pause() {
-        this.isPlaying = false;
-        console.log('Animation system paused');
-    }
-
-    stop() {
-        this.isPlaying = false;
-        this.clock.stop();
-        this.coordinatedOperations.stopAllOperations();
-        this.clearAllAnimations();
-        
-        // Update button states
-        const coordinatedBtn = document.getElementById('coordinated-btn');
-        if (coordinatedBtn) {
-            coordinatedBtn.textContent = '🏭 OSR Operations';
-            coordinatedBtn.classList.remove('active');
-        }
-        
-        console.log('Animation system stopped');
-    }
-
-    setSpeed(speed) {
-        this.speed = Math.max(0.1, Math.min(5.0, speed));
-        console.log(`Animation speed set to: ${this.speed}x`);
-    }
-
-    clearAllAnimations() {
-        this.activeAnimations.clear();
-        this.operationQueue = [];
-        
-        // Reset all shuttles to home position
-        this.shuttles.forEach(shuttle => {
-            shuttle.position.copy(shuttle.userData.homePosition);
-            shuttle.userData.isMoving = false;
-            shuttle.userData.targetPosition = null;
-        });
-        
-        // Reset all lifts to home position
-        this.lifts.forEach(lift => {
-            lift.position.copy(lift.userData.homePosition);
-            lift.userData.isMoving = false;
-            lift.userData.targetPosition = null;
-            lift.userData.currentLevel = 0;
-        });
-        
-        // Hide all containers
-        this.containers.forEach(container => container.hide());
-    }
-
-    update() {
-        if (!this.isPlaying) return;
-        
-        const deltaTime = this.clock.getDelta() * this.speed;
-        
-        // Update all active animations
-        this.updateShuttleAnimations(deltaTime);
-        this.updateLiftAnimations(deltaTime);
-        this.updateContainerAnimations(deltaTime);
-        
-        // Process operation queue
-        this.processOperationQueue();
-    }
-
-    updateShuttleAnimations(deltaTime) {
-        this.shuttles.forEach(shuttle => {
-            if (shuttle.userData.isMoving && shuttle.userData.targetPosition) {
-                const current = shuttle.position;
-                const target = shuttle.userData.targetPosition;
-                const distance = current.distanceTo(target);
-                
-                if (distance < 0.1) {
-                    // Reached target
-                    shuttle.position.copy(target);
-                    shuttle.userData.isMoving = false;
-                    shuttle.userData.targetPosition = null;
-                    console.log(`Shuttle ${shuttle.userData.id} reached target`);
-                } else {
-                    // Move towards target
-                    const direction = target.clone().sub(current).normalize();
-                    const moveDistance = shuttle.userData.speed * deltaTime;
-                    current.add(direction.multiplyScalar(Math.min(moveDistance, distance)));
-                }
-            }
-        });
-    }
-
-    updateLiftAnimations(deltaTime) {
-        this.lifts.forEach(lift => {
-            if (lift.userData.isMoving && lift.userData.targetPosition) {
-                const current = lift.position;
-                const target = lift.userData.targetPosition;
-                const distance = Math.abs(current.y - target.y);
-                
-                if (distance < 0.1) {
-                    // Reached target
-                    lift.position.copy(target);
-                    lift.userData.isMoving = false;
-                    lift.userData.targetPosition = null;
-                    console.log(`Lift ${lift.userData.id} reached level ${lift.userData.currentLevel}`);
-                } else {
-                    // Move towards target
-                    const direction = Math.sign(target.y - current.y);
-                    const moveDistance = lift.userData.speed * deltaTime;
-                    current.y += direction * Math.min(moveDistance, distance);
-                }
-            }
-        });
-    }
-
-    updateContainerAnimations(deltaTime) {
-        this.containers.forEach(container => {
-            container.update(deltaTime);
-        });
-    }
-
-    processOperationQueue() {
-        // Process queued operations (will be implemented in next steps)
-        if (this.operationQueue.length > 0) {
-            // Implementation in Phase 3
-        }
-    }
-
-    createAnimationControls() {
-        // Create UI controls for animation system
-        const controlsPanel = document.createElement('div');
-        controlsPanel.id = 'animation-controls';
-        controlsPanel.innerHTML = `
-            <div class="animation-header">
-                <h3>🎬 Animation Controls</h3>
-            </div>
-            
-            <div class="animation-buttons">
-                <button id="play-btn" class="anim-btn">▶️ Play</button>
-                <button id="pause-btn" class="anim-btn">⏸️ Pause</button>
-                <button id="stop-btn" class="anim-btn">⏹️ Stop</button>
-            </div>
-            
-            <div class="demo-controls">
-                <button id="coordinated-btn" class="anim-btn demo-btn">🏭 OSR Operations</button>
-            </div>
-            
-            <div class="animation-controls">
-                <label>Speed: <span id="speed-value">1.0x</span></label>
-                <input type="range" id="speed-slider" min="0.1" max="3.0" step="0.1" value="1.0">
-            </div>
-            
-            <div class="animation-info">
-                <div>Active: <span id="active-count">0</span></div>
-                <div>Queued: <span id="queue-count">0</span></div>
-            </div>
-        `;
-        
-        document.body.appendChild(controlsPanel);
-        this.addAnimationStyles();
-        this.bindAnimationEvents();
-    }
-
-    addAnimationStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            #animation-controls {
-                position: fixed;
-                top: 320px;
-                left: 20px;
-                width: 200px;
-                background: rgba(30, 30, 30, 0.9);
-                color: white;
-                border: 2px solid #555;
-                border-radius: 10px;
-                padding: 15px;
-                font-family: Arial, sans-serif;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-                z-index: 1000;
-            }
-            
-            .animation-header h3 {
-                margin: 0 0 15px 0;
-                color: #fff;
-                text-align: center;
-                font-size: 16px;
-            }
-            
-            .animation-buttons {
-                display: grid;
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 5px;
-                margin-bottom: 15px;
-            }
-            
-            .anim-btn {
-                padding: 8px 4px;
-                background: #555;
-                color: white;
-                border: 1px solid #777;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 10px;
-                transition: background 0.3s;
-            }
-            
-            .anim-btn:hover {
-                background: #007acc;
-            }
-            
-            .demo-controls {
-                margin-bottom: 15px;
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 8px;
-            }
-            
-            .demo-btn {
-                width: 100%;
-                padding: 8px;
-                background: #4CAF50;
-                color: white;
-                border: 1px solid #45a049;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 11px;
-                transition: background 0.3s;
-            }
-            
-            .demo-btn:hover {
-                background: #45a049;
-            }
-            
-            .demo-btn.active {
-                background: #f44336;
-            }
-            
-            .animation-controls {
-                margin-bottom: 15px;
-            }
-            
-            .animation-controls label {
-                display: block;
-                margin-bottom: 5px;
-                font-size: 12px;
-            }
-            
-            #speed-slider {
-                width: 100%;
-            }
-            
-            .animation-info {
-                border-top: 1px solid #555;
-                padding-top: 10px;
-                font-size: 11px;
-            }
-            
-            .animation-info div {
-                margin-bottom: 3px;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    bindAnimationEvents() {
-        document.getElementById('play-btn').addEventListener('click', () => this.play());
-        document.getElementById('pause-btn').addEventListener('click', () => this.pause());
-        document.getElementById('stop-btn').addEventListener('click', () => this.stop());
-        
-        const coordinatedBtn = document.getElementById('coordinated-btn');
-        coordinatedBtn.addEventListener('click', () => {
-            if (coordinatedBtn.classList.contains('active')) {
-                this.coordinatedOperations.stopAllOperations();
-                coordinatedBtn.textContent = '🏭 OSR Operations';
-                coordinatedBtn.classList.remove('active');
-            } else {
-                this.play(); // Ensure animation system is running
-                this.coordinatedOperations.startCoordinatedDemo();
-                coordinatedBtn.textContent = '🛑 Stop OSR';
-                coordinatedBtn.classList.add('active');
-            }
-        });
-        
-        const speedSlider = document.getElementById('speed-slider');
-        const speedValue = document.getElementById('speed-value');
-        
-        speedSlider.addEventListener('input', (e) => {
-            const speed = parseFloat(e.target.value);
-            this.setSpeed(speed);
-            speedValue.textContent = `${speed.toFixed(1)}x`;
-        });
-    }
-
-    updateUI() {
-        // Update animation info display
-        const activeCount = document.getElementById('active-count');
-        const queueCount = document.getElementById('queue-count');
-        
-        // Count active coordinated operations
-        const coordinatedOpsCount = this.coordinatedOperations.activeOperations.size;
-        const totalActive = this.activeAnimations.size + coordinatedOpsCount;
-        
-        if (activeCount) activeCount.textContent = totalActive;
-        if (queueCount) queueCount.textContent = this.operationQueue.length;
     }
 }

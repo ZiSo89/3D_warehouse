@@ -39,29 +39,8 @@ export function createTransporters(uiConfig, constants) {
     const rackAndAisleWidth = (totalRackDepth * 2) + constants.aisleWidth;
 
     for (let a = 0; a < uiConfig.aisles; a++) {
-        // Simplified Lift
-        const liftGeometry = new THREE.BoxGeometry(0.6, 1.0, 0.6);
-        const lift = new THREE.Mesh(liftGeometry, liftMaterial);
-        lift.position.set(
-            a * rackAndAisleWidth + totalRackDepth + (constants.aisleWidth / 2),
-            0.5,
-            -totalRackDepth / 2
-        );
-        lift.castShadow = true;
-        lift.receiveShadow = true;
-        transportersGroup.add(lift);
-
-        // Simplified Shuttle
-        const shuttleGeometry = new THREE.BoxGeometry(0.4, 0.3, 1.0);
-        const shuttle = new THREE.Mesh(shuttleGeometry, shuttleMaterial);
-        shuttle.position.set(
-            lift.position.x,
-            constants.levelHeight / 2,
-            (uiConfig.modules_per_aisle * uiConfig.locations_per_module * constants.locationLength) / 2
-        );
-        shuttle.castShadow = true;
-        shuttle.receiveShadow = true;
-        transportersGroup.add(shuttle);
+        // Old lifts and shuttles removed - now using animated equipment from AnimationManager
+        // This loop can be removed entirely if no other transporters are needed
     }
 
     return transportersGroup;
