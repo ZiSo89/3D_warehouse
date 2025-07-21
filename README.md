@@ -126,7 +126,6 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## Future Enhancements
 
-- ✅ **Container animation system** (Implemented)
 - Multiple container animations simultaneously
 - Warehouse operation simulations with metrics
 - Export/import of warehouse configurations

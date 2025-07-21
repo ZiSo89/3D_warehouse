@@ -15,6 +15,29 @@ export class SceneManager {
         this.warehouseGroup = new THREE.Group();
         this.animationManager = new AnimationManager(this);
         this.scene.add(this.warehouseGroup);
+        
+        // Define missing locations (like in WH_MODEL.txt)
+        this.missingLocations = [
+            // Example: Missing location due to building column in aisle 1, level 2, module 3, depth 0, position 1
+            { aisle: 1, level: 2, module: 3, depth: 0, position: 1 },
+            // Example: Multiple aisles affected - service levels have missing locations
+            { aisle: [0, 1], level: [3, 4], module: 2, depth: null, position: 0 },
+            // Example: Missing entire module due to lift shaft
+            { aisle: 2, level: null, module: 7, depth: null, position: null }
+        ];
+        
+        // Define location types (like in WH_MODEL.txt)
+        this.locationTypes = {
+            // Buffer locations near lifts - these are special locations used for lift operations
+            buffer_locations: [
+                // Buffer zone in aisle 0, all levels, first and last modules
+                { aisle: 0, level: null, module: [0, 0], depth: [0, 1], position: null, type: 'Buffer' },
+                // Buffer zone in last aisle, all levels, first and last modules  
+                { aisle: 2, level: null, module: [6, 7], depth: [0, 1], position: null, type: 'Buffer' }
+            ],
+            // All other locations are Storage by default
+            default_type: 'Storage'
+        };
     }
 
     init() {
@@ -41,7 +64,133 @@ export class SceneManager {
 
         window.addEventListener('resize', this.onWindowResize.bind(this), false);
 
+        this.createOrientationLabels(); // Large labels at warehouse edges
+        this.createCompass(); // 3D compass for orientation
+
         this.animate();
+    }
+
+    createOrientationLabels() {
+        const labels = ['NORTH', 'SOUTH', 'EAST', 'WEST'];
+        const positions = [
+            new THREE.Vector3(0, 1, -140), // North
+            new THREE.Vector3(0, 1, 140),  // South
+            new THREE.Vector3(140, 1, 0),  // East
+            new THREE.Vector3(-140, 1, 0)  // West
+        ];
+
+        labels.forEach((text, i) => {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const fontSize = 48;
+            context.font = `bold ${fontSize}px Arial`;
+            const textWidth = context.measureText(text).width;
+
+            canvas.width = textWidth;
+            canvas.height = fontSize;
+            
+            context.font = `bold ${fontSize}px Arial`;
+            context.fillStyle = 'rgba(30, 50, 49, 0.7)';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            
+            sprite.position.copy(positions[i]);
+            sprite.scale.set(canvas.width / 5, canvas.height / 5, 1.0);
+            
+            this.scene.add(sprite);
+        });
+    }
+
+    createCompass() {
+        // Create compass group positioned at bottom-right of screen
+        this.compassGroup = new THREE.Group();
+        
+        // Compass base (circle)
+        const compassGeometry = new THREE.CylinderGeometry(3, 3, 0.2, 32);
+        const compassMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x2d3748, 
+            metalness: 0.7,
+            roughness: 0.3
+        });
+        const compassBase = new THREE.Mesh(compassGeometry, compassMaterial);
+        this.compassGroup.add(compassBase);
+
+        // Create directional arrows
+        const arrowGeometry = new THREE.ConeGeometry(0.4, 1.5, 8);
+        
+        // North arrow (red) - points to negative Z (back of warehouse)
+        const northArrow = new THREE.Mesh(arrowGeometry, new THREE.MeshStandardMaterial({ color: 0xff4444 }));
+        northArrow.position.set(0, 0.6, -2);
+        northArrow.rotation.x = Math.PI;
+        this.compassGroup.add(northArrow);
+        
+        // South arrow (blue) - points to positive Z (lift area)
+        const southArrow = new THREE.Mesh(arrowGeometry, new THREE.MeshStandardMaterial({ color: 0x4444ff }));
+        southArrow.position.set(0, 0.6, 2);
+        this.compassGroup.add(southArrow);
+        
+        // East arrow (green) - points to positive X (right)
+        const eastArrow = new THREE.Mesh(arrowGeometry, new THREE.MeshStandardMaterial({ color: 0x44ff44 }));
+        eastArrow.position.set(2, 0.6, 0);
+        eastArrow.rotation.z = -Math.PI / 2;
+        this.compassGroup.add(eastArrow);
+        
+        // West arrow (yellow) - points to negative X (left)
+        const westArrow = new THREE.Mesh(arrowGeometry, new THREE.MeshStandardMaterial({ color: 0xffff44 }));
+        westArrow.position.set(-2, 0.6, 0);
+        westArrow.rotation.z = Math.PI / 2;
+        this.compassGroup.add(westArrow);
+
+        // Add text labels
+        this.addCompassLabels();
+        
+        // Position compass in corner of warehouse area
+        this.compassGroup.position.set(20, 2, 20);
+        this.compassGroup.scale.setScalar(0.8);
+        
+        this.scene.add(this.compassGroup);
+    }
+
+    addCompassLabels() {
+        const labels = [
+            { text: 'N', position: new THREE.Vector3(0, 1.2, -2.5), color: '#ff4444' },
+            { text: 'S', position: new THREE.Vector3(0, 1.2, 2.5), color: '#4444ff' },
+            { text: 'E', position: new THREE.Vector3(2.5, 1.2, 0), color: '#44ff44' },
+            { text: 'W', position: new THREE.Vector3(-2.5, 1.2, 0), color: '#ffff44' }
+        ];
+
+        labels.forEach(({ text, position, color }) => {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const fontSize = 64;
+            
+            canvas.width = 80;
+            canvas.height = 80;
+            
+            context.font = `bold ${fontSize}px Arial`;
+            context.fillStyle = color;
+            context.strokeStyle = '#000000';
+            context.lineWidth = 3;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            
+            context.strokeText(text, 40, 40);
+            context.fillText(text, 40, 40);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            
+            sprite.position.copy(position);
+            sprite.scale.set(1.5, 1.5, 1.0);
+            
+            this.compassGroup.add(sprite);
+        });
     }
 
     onWindowResize() {
@@ -128,7 +277,7 @@ export class SceneManager {
             this.warehouseGroup.remove(this.warehouseGroup.children[0]);
         }
 
-        const racks = createRacks(uiConfig, constants);
+        const racks = createRacks(uiConfig, constants, this.missingLocations, this.locationTypes);
         this.warehouseGroup.add(racks);
 
         const prezone = createPrezone(uiConfig, constants);
@@ -178,5 +327,67 @@ export class SceneManager {
             this.scene.background = new THREE.Color(0xf1faee); // Light cream
             this.scene.fog = new THREE.Fog(0xf1faee, 50, 100);
         }
+    }
+
+    // Method to add/remove missing locations dynamically
+    updateMissingLocations(newMissingLocations) {
+        this.missingLocations = newMissingLocations;
+        console.log("🚫 Updated missing locations:", this.missingLocations);
+    }
+
+    // Method to add a single missing location
+    addMissingLocation(aisle, level, module, depth, position) {
+        this.missingLocations.push({ aisle, level, module, depth, position });
+        console.log(`🚫 Added missing location: Aisle ${aisle}, Level ${level}, Module ${module}, Depth ${depth}, Position ${position}`);
+    }
+
+    // Method to clear all missing locations
+    clearMissingLocations() {
+        this.missingLocations = [];
+        console.log("✅ Cleared all missing locations");
+    }
+
+    // Methods to manage location types dynamically
+    getLocationType(aisle, level, module, depth, position) {
+        // Check if location matches any buffer location definition
+        const isBuffer = this.locationTypes.buffer_locations.some(buffer => {
+            const aisleMatch = Array.isArray(buffer.aisle) ? 
+                buffer.aisle.includes(aisle) : 
+                (buffer.aisle === null || buffer.aisle === aisle);
+            
+            const levelMatch = Array.isArray(buffer.level) ? 
+                buffer.level.includes(level) : 
+                (buffer.level === null || buffer.level === level);
+            
+            const moduleMatch = Array.isArray(buffer.module) ? 
+                buffer.module.includes(module) : 
+                (buffer.module === null || buffer.module === module);
+            
+            const depthMatch = Array.isArray(buffer.depth) ? 
+                buffer.depth.includes(depth) : 
+                (buffer.depth === null || buffer.depth === depth);
+            
+            const positionMatch = Array.isArray(buffer.position) ? 
+                buffer.position.includes(position) : 
+                (buffer.position === null || buffer.position === position);
+            
+            return aisleMatch && levelMatch && moduleMatch && depthMatch && positionMatch;
+        });
+        
+        return isBuffer ? 'Buffer' : this.locationTypes.default_type;
+    }
+
+    // Method to add a buffer location type
+    addBufferLocation(aisle, level, module, depth, position) {
+        this.locationTypes.buffer_locations.push({ 
+            aisle, level, module, depth, position, type: 'Buffer' 
+        });
+        console.log(`📦 Added Buffer location: Aisle ${aisle}, Level ${level}, Module ${module}, Depth ${depth}, Position ${position}`);
+    }
+
+    // Method to clear all buffer locations
+    clearBufferLocations() {
+        this.locationTypes.buffer_locations = [];
+        console.log("✅ Cleared all buffer locations");
     }
 }

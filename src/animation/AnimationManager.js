@@ -136,6 +136,14 @@ export class AnimationManager {
 
     executeAnimationWithEquipmentPositions(uiConfig, positions) {
 
+        // Show all lifts and shuttles
+        for (const lift of this.lifts.values()) {
+            lift.visible = true;
+        }
+        for (const shuttle of this.shuttles.values()) {
+            shuttle.visible = true;
+        }
+
         const { warehouseOffset, liftX, liftZ, shuttleX, shuttleZ, startPos, levelY, targetModuleZ } = positions;
 
         // STEP 1: Move from picking station to cross-conveyor (Y should be on conveyor)
@@ -238,6 +246,10 @@ export class AnimationManager {
             Math.abs(lift.position.x - liftX) < 0.1 && Math.abs(lift.position.z - liftZ) < 0.1
         );
 
+        // Show only the active lift and shuttle
+        if (activeLift) activeLift.visible = true;
+        if (activeShuttle) activeShuttle.visible = true;
+
         console.log("🏗️ Equipment for animation:", {
             activeLift: activeLift ? "FOUND" : "NOT FOUND",
             activeShuttle: activeShuttle ? "FOUND" : "NOT FOUND"
@@ -336,6 +348,22 @@ export class AnimationManager {
             console.log(`✅ STEP ${tweens.length} (Storage) STORED: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
             console.log("🎉 === ANIMATION COMPLETED ===");
             this.isAnimating = false;
+            // Reset container to default position
+            if (this.animationContainer && startPos) {
+                this.animationContainer.position.set(startPos.x, startPos.y, startPos.z);
+            }
+            // Reset lifts to their home positions
+            for (const lift of this.lifts.values()) {
+                if (lift.userData && lift.userData.homePosition) {
+                    lift.position.copy(lift.userData.homePosition);
+                }
+            }
+            // Reset shuttles to their home positions
+            for (const shuttle of this.shuttles.values()) {
+                if (shuttle.userData && shuttle.userData.homePosition) {
+                    shuttle.position.copy(shuttle.userData.homePosition);
+                }
+            }
         });
 
         // Start animation sequence
@@ -546,14 +574,34 @@ export class AnimationManager {
         if (this.tweenJs) {
             this.tweenJs.removeAll();
         }
-        
+
+        // Reset container to default position if exists
+        if (this.animationContainer && this.lastStartPos) {
+            this.animationContainer.position.set(this.lastStartPos.x, this.lastStartPos.y, this.lastStartPos.z);
+        }
+
+        // Reset lifts to their home positions
+        for (const lift of this.lifts.values()) {
+            if (lift.userData && lift.userData.homePosition) {
+                lift.position.copy(lift.userData.homePosition);
+            }
+        }
+        // Reset shuttles to their home positions
+        for (const shuttle of this.shuttles.values()) {
+            if (shuttle.userData && shuttle.userData.homePosition) {
+                shuttle.position.copy(shuttle.userData.homePosition);
+            }
+        }
+
         if (this.animationContainer) {
             this.scene.remove(this.animationContainer);
             this.animationContainer = null;
         }
-        
+
         this.isAnimating = false;
         console.log("Animation stopped!");
+        // Store start position for reset on stop
+        this.lastStartPos = positions.startPos;
     }
 
     update() {

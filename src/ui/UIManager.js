@@ -74,12 +74,9 @@ export class UIManager {
                 <div class="ui-section animation-section">
                     <h4>Container Animation:</h4>
                     <div class="animation-controls">
-                        <button id="start-animation-btn" class="animation-btn">Start Animation</button>
-                        <button id="stop-animation-btn" class="animation-btn secondary">Stop Animation</button>
+                        <button id="toggle-animation-btn" class="animation-btn">Start Animation</button>
                     </div>
-                    <div class="equipment-controls">
-                        <button id="toggle-equipment-btn" class="animation-btn">🤖 Show Equipment</button>
-                    </div>
+                    <!-- Equipment controls removed -->
                 </div>
 
                 <div class="ui-section">
@@ -361,33 +358,47 @@ export class UIManager {
             this.updateLevelInputs();
         });
 
-        // Animation buttons
-        document.getElementById('start-animation-btn').addEventListener('click', () => {
-            this.sceneManager.animationManager.startContainerAnimation(this.uiConfig);
-        });
+        // Animation toggle button
+        const toggleBtn = document.getElementById('toggle-animation-btn');
+        let isAnimating = false;
 
-        document.getElementById('stop-animation-btn').addEventListener('click', () => {
-            this.sceneManager.animationManager.stopAnimation();
-        });
+        // Listen for animation end to reset button
+        const animationManager = this.sceneManager.animationManager;
+        const originalStart = animationManager.startContainerAnimation.bind(animationManager);
+        const originalStop = animationManager.stopAnimation.bind(animationManager);
 
-        // Equipment toggle button
-        document.getElementById('toggle-equipment-btn').addEventListener('click', () => {
-            const btn = document.getElementById('toggle-equipment-btn');
-            const shuttleGroup = this.sceneManager.animationManager.shuttleGroup;
-            const liftGroup = this.sceneManager.animationManager.liftGroup;
-            
-            if (shuttleGroup.visible) {
-                shuttleGroup.visible = false;
-                liftGroup.visible = false;
-                btn.textContent = '🤖 Show Equipment';
-                btn.classList.add('secondary');
+        // Patch startContainerAnimation to reset button at end
+        animationManager.startContainerAnimation = async (...args) => {
+            isAnimating = true;
+            toggleBtn.textContent = 'Stop Animation';
+            await originalStart(...args);
+            // Wait for animation to finish (isAnimating set to false in AnimationManager)
+            const checkEnd = () => {
+                if (!animationManager.isAnimating) {
+                    isAnimating = false;
+                    toggleBtn.textContent = 'Start Animation';
+                } else {
+                    setTimeout(checkEnd, 200);
+                }
+            };
+            checkEnd();
+        };
+
+        animationManager.stopAnimation = (...args) => {
+            isAnimating = false;
+            toggleBtn.textContent = 'Start Animation';
+            return originalStop(...args);
+        };
+
+        toggleBtn.addEventListener('click', () => {
+            if (!isAnimating) {
+                animationManager.startContainerAnimation(this.uiConfig);
             } else {
-                shuttleGroup.visible = true;
-                liftGroup.visible = true;
-                btn.textContent = '🚫 Hide Equipment';
-                btn.classList.remove('secondary');
+                animationManager.stopAnimation();
             }
         });
+
+        // ...existing code...
     }
 
     updateLevelInputs() {

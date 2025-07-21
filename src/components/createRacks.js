@@ -1,7 +1,58 @@
 import * as THREE from 'three';
 
-export function createRacks(uiConfig, constants) {
+export function createRacks(uiConfig, constants, missingLocations = [], locationTypes = null) {
     const racksGroup = new THREE.Group();
+
+    // Helper function to check if a location should be missing
+    const isLocationMissing = (aisle, level, module, depth, position) => {
+        return missingLocations.some(missing => {
+            const aisleMatch = Array.isArray(missing.aisle) ? 
+                missing.aisle.includes(aisle) : 
+                (missing.aisle === null || missing.aisle === aisle);
+            
+            const levelMatch = Array.isArray(missing.level) ? 
+                missing.level.includes(level) : 
+                (missing.level === null || missing.level === level);
+            
+            const moduleMatch = missing.module === null || missing.module === module;
+            const depthMatch = missing.depth === null || missing.depth === depth;
+            const positionMatch = missing.position === null || missing.position === position;
+            
+            return aisleMatch && levelMatch && moduleMatch && depthMatch && positionMatch;
+        });
+    };
+
+    // Helper function to get location type
+    const getLocationType = (aisle, level, module, depth, position) => {
+        if (!locationTypes) return 'Storage';
+        
+        // Check if location matches any buffer location definition
+        const isBuffer = locationTypes.buffer_locations.some(buffer => {
+            const aisleMatch = Array.isArray(buffer.aisle) ? 
+                buffer.aisle.includes(aisle) : 
+                (buffer.aisle === null || buffer.aisle === aisle);
+            
+            const levelMatch = Array.isArray(buffer.level) ? 
+                buffer.level.includes(level) : 
+                (buffer.level === null || buffer.level === level);
+            
+            const moduleMatch = Array.isArray(buffer.module) ? 
+                buffer.module.includes(module) : 
+                (buffer.module === null || buffer.module === module);
+            
+            const depthMatch = Array.isArray(buffer.depth) ? 
+                buffer.depth.includes(depth) : 
+                (buffer.depth === null || buffer.depth === depth);
+            
+            const positionMatch = Array.isArray(buffer.position) ? 
+                buffer.position.includes(position) : 
+                (buffer.position === null || buffer.position === position);
+            
+            return aisleMatch && levelMatch && moduleMatch && depthMatch && positionMatch;
+        });
+        
+        return isBuffer ? 'Buffer' : locationTypes.default_type;
+    };
 
     const moduleLength = uiConfig.locations_per_module * constants.locationLength;
     const totalRackDepth = uiConfig.storage_depth * constants.locationDepth;
@@ -91,12 +142,51 @@ export function createRacks(uiConfig, constants) {
                     // Simplified storage locations for better performance
                     for (let d = 0; d < uiConfig.storage_depth; d++) {
                         for (let s = 0; s < uiConfig.locations_per_module; s++) {
-                            // Single optimized location box with palette colors
-                            const locationMaterial = new THREE.MeshStandardMaterial({
-                                color: (d % 2 === 0) ? 0x6e9075 : 0xf1faee, // Green and cream from palette
-                                metalness: 0.3,
-                                roughness: 0.7
-                            });
+                            // Check if this location should be missing
+                            if (isLocationMissing(a, l, m, d, s)) {
+                                // Create a visual indicator for missing location (optional column/obstacle)
+                                if (uiConfig.showMissingIndicators !== false) {
+                                    const obstacleGeometry = new THREE.CylinderGeometry(0.2, 0.3, constants.levelHeight * levels, 8);
+                                    const obstacleMaterial = new THREE.MeshStandardMaterial({
+                                        color: 0x8b0000, // Dark red for obstacles
+                                        metalness: 0.1,
+                                        roughness: 0.9
+                                    });
+                                    const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+                                    obstacle.position.set(
+                                        (d * constants.locationDepth) + (constants.locationDepth / 2),
+                                        (constants.levelHeight * levels) / 2,
+                                        (s * constants.locationLength) + (constants.locationLength / 2)
+                                    );
+                                    obstacle.castShadow = true;
+                                    obstacle.receiveShadow = true;
+                                    moduleGroup.add(obstacle);
+                                }
+                                continue; // Skip creating the storage location
+                            }
+
+                            // Get location type to determine material
+                            const locationType = getLocationType(a, l, m, d, s);
+                            
+                            // Create different materials based on location type
+                            let locationMaterial;
+                            if (locationType === 'Buffer') {
+                                // Buffer locations - bright orange/yellow for easy identification
+                                locationMaterial = new THREE.MeshStandardMaterial({
+                                    color: 0xff8500, // Bright orange for buffer locations
+                                    metalness: 0.4,
+                                    roughness: 0.5,
+                                    emissive: 0x331a00, // Slight orange glow
+                                    emissiveIntensity: 0.1
+                                });
+                            } else {
+                                // Regular storage locations - existing color scheme
+                                locationMaterial = new THREE.MeshStandardMaterial({
+                                    color: (d % 2 === 0) ? 0x6e9075 : 0xf1faee, // Green and cream from palette
+                                    metalness: 0.3,
+                                    roughness: 0.7
+                                });
+                            }
                             
                             const locationGeometry = new THREE.BoxGeometry(
                                 constants.locationDepth * 0.8, 
@@ -106,6 +196,22 @@ export function createRacks(uiConfig, constants) {
                             const locationBox = new THREE.Mesh(locationGeometry, locationMaterial);
                             locationBox.castShadow = true;
                             locationBox.receiveShadow = true;
+
+                            // Store location metadata for future reference (like click interactions)
+                            locationBox.userData = {
+                                aisle: a,
+                                level: l,
+                                module: m,
+                                depth: d,
+                                position: s,
+                                type: locationType,
+                                id: `${a}-${l}-${m}-${d}-${s}`,
+                                coordinates: {
+                                    x: (d * constants.locationDepth) + (constants.locationDepth / 2),
+                                    y: (l * constants.levelHeight) + (constants.levelHeight / 2),
+                                    z: (s * constants.locationLength) + (constants.locationLength / 2)
+                                }
+                            };
 
                             locationBox.position.set(
                                 (d * constants.locationDepth) + (constants.locationDepth / 2),
