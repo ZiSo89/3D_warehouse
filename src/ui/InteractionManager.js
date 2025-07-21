@@ -75,13 +75,6 @@ export class InteractionManager {
                 <button class="camera-btn" data-preset="prezoneView">📦 Prezone</button>
             </div>
 
-            <div class="interaction-info">
-                <h4>Controls:</h4>
-                <div class="control-item">🖱️ Click: Select object</div>
-                <div class="control-item">1-4: Quick camera views</div>
-                <div class="control-item">ESC: Deselect</div>
-            </div>
-
             <div class="object-info" id="object-info" style="display: none;">
                 <h4>Selected Object:</h4>
                 <div id="object-details"></div>
@@ -100,22 +93,26 @@ export class InteractionManager {
                 position: fixed;
                 top: 20px;
                 left: 20px;
-                width: 220px;
-                background: rgba(50, 50, 50, 0.9);
-                color: white;
-                border: 2px solid #666;
+                width: 280px;
+                background: rgba(30, 50, 49, 0.95);
+                color: #f1faee;
+                border: 2px solid #6e9075;
                 border-radius: 10px;
                 padding: 15px;
                 font-family: Arial, sans-serif;
                 box-shadow: 0 4px 8px rgba(0,0,0,0.3);
                 z-index: 1000;
+                max-height: 80vh;
+                overflow-y: auto;
             }
             
             .interaction-header h3 {
                 margin: 0 0 15px 0;
-                color: #fff;
+                color: #f1faee;
                 text-align: center;
                 font-size: 16px;
+                border-bottom: 1px solid #6e9075;
+                padding-bottom: 8px;
             }
             
             .camera-buttons {
@@ -126,52 +123,88 @@ export class InteractionManager {
             }
             
             .camera-btn {
-                padding: 8px 4px;
-                background: #444;
-                color: white;
-                border: 1px solid #666;
-                border-radius: 5px;
-                cursor: pointer;
+                padding: 8px 6px;
+                background: #6e9075;
+                color: #f1faee;
+                border: none;
+                border-radius: 4px;
                 font-size: 11px;
+                cursor: pointer;
                 transition: background 0.3s;
             }
             
             .camera-btn:hover {
-                background: #007acc;
+                background: #93032e;
             }
             
             .interaction-info {
-                border-top: 1px solid #666;
-                padding-top: 10px;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
+                padding: 10px;
+                background: rgba(229, 209, 208, 0.1);
+                border-radius: 5px;
             }
             
             .interaction-info h4 {
                 margin: 0 0 8px 0;
+                color: #e5d1d0;
                 font-size: 14px;
-                color: #ccc;
             }
             
             .control-item {
-                font-size: 11px;
-                color: #aaa;
+                font-size: 12px;
                 margin-bottom: 4px;
+                color: #f1faee;
             }
             
             .object-info {
-                border-top: 1px solid #666;
-                padding-top: 10px;
+                background: rgba(147, 3, 46, 0.1);
+                border: 1px solid #93032e;
+                border-radius: 5px;
+                padding: 12px;
+                margin-top: 10px;
             }
             
             .object-info h4 {
-                margin: 0 0 8px 0;
+                margin: 0 0 10px 0;
+                color: #93032e;
                 font-size: 14px;
-                color: #4CAF50;
+                border-bottom: 1px solid #93032e;
+                padding-bottom: 5px;
             }
             
-            #object-details {
+            .object-info h3 {
+                margin: 0 0 10px 0;
+                color: #93032e;
+                font-size: 16px;
+                text-align: center;
+            }
+            
+            .object-details-content {
                 font-size: 12px;
-                color: #ddd;
+                line-height: 1.4;
+                color: #f1faee;
+            }
+            
+            .object-details-content strong {
+                color: #e5d1d0;
+            }
+            
+            #interaction-panel::-webkit-scrollbar {
+                width: 6px;
+            }
+            
+            #interaction-panel::-webkit-scrollbar-track {
+                background: rgba(110, 144, 117, 0.2);
+                border-radius: 3px;
+            }
+            
+            #interaction-panel::-webkit-scrollbar-thumb {
+                background: #6e9075;
+                border-radius: 3px;
+            }
+            
+            #interaction-panel::-webkit-scrollbar-thumb:hover {
+                background: #93032e;
             }
         `;
         document.head.appendChild(style);
@@ -305,69 +338,94 @@ export class InteractionManager {
         const worldPosition = new THREE.Vector3();
         object.getWorldPosition(worldPosition);
 
-        // Debug: Log object properties
-        console.log('Selected object:', object);
-        console.log('Material:', object.material);
-        console.log('Geometry:', object.geometry);
-        console.log('Position:', worldPosition);
-
-        // Check by material color (with more flexible matching)
-        if (object.material && object.material.color) {
+        // First check userData for detailed object information
+        if (object.userData && Object.keys(object.userData).length > 0) {
+            const userData = object.userData;
+            
+            // Storage Location with detailed info
+            if (userData.type && userData.aisle !== undefined) {
+                objectType = `${userData.type} Location`;
+                objectDetails = `<strong>Type:</strong> ${userData.type}<br><strong>Coordinates:</strong> Aisle ${userData.aisle + 1}, Level ${userData.level + 1}, Module ${userData.module + 1}<br><strong>Position:</strong> Depth ${userData.depth + 1}, Slot ${userData.position + 1}`;
+                
+                // Add Buffer location specific info
+                if (userData.type === 'Buffer') {
+                    objectDetails += `<br><strong>Function:</strong> Buffer zone near lift operations`;
+                }
+            }
+            // Animated equipment (shuttles, lifts, etc.)
+            else if (userData.type) {
+                switch (userData.type) {
+                    case 'shuttle':
+                        objectType = 'OSR Shuttle';
+                        objectDetails = `<strong>Type:</strong> Autonomous Shuttle Vehicle<br><strong>Aisle:</strong> ${userData.aisleId ? userData.aisleId + 1 : 'Unknown'}<br><strong>Level:</strong> ${userData.level !== undefined ? userData.level + 1 : 'Unknown'}<br><strong>Status:</strong> ${userData.status || 'Operational'}`;
+                        break;
+                    case 'lift':
+                        objectType = 'Container Lift';
+                        objectDetails = `<strong>Type:</strong> Vertical Transporter<br><strong>Aisle:</strong> ${userData.aisleId ? userData.aisleId + 1 : 'Unknown'}<br><strong>Function:</strong> Moves containers between levels<br><strong>Status:</strong> ${userData.status || 'Operational'}`;
+                        break;
+                    case 'container':
+                        objectType = 'Storage Container';
+                        objectDetails = `<strong>Type:</strong> ${userData.containerType || 'Standard Container'}<br><strong>Status:</strong> ${userData.status || 'In transit'}`;
+                        break;
+                }
+            }
+        }
+        // Check for missing location obstacles (red columns)
+        else if (object.material && object.material.color) {
             const colorHex = object.material.color.getHex();
-            console.log('Color hex:', colorHex.toString(16));
-
-            if (colorHex === 0xffd700 || colorHex === 0xffff00) { // Gold/Yellow - Lift
+            
+            if (colorHex === 0x8b0000) { // Dark red - Missing location obstacle
+                objectType = 'Missing Location';
+                objectDetails = `<strong>Type:</strong> Blocked/Unavailable Location<br><strong>Reason:</strong> Building obstacle (column, lift shaft, etc.)<br><strong>Status:</strong> Permanently unavailable for storage`;
+            }
+            // Check other object types by color
+            else if (colorHex === 0xffd700 || colorHex === 0xffff00) { // Gold/Yellow - Lift
                 objectType = 'Container Lift';
-                objectDetails = `Vertical transporter that moves containers between levels`;
+                objectDetails = `<strong>Type:</strong> Vertical Transporter<br><strong>Function:</strong> Moves containers between levels`;
             } else if (colorHex === 0xdc143c || colorHex === 0xff0000) { // Red - Shuttle
                 objectType = 'OSR Shuttle';
-                objectDetails = `Autonomous vehicle that travels on rails within aisles`;
+                objectDetails = `<strong>Type:</strong> Autonomous Rail Vehicle<br><strong>Function:</strong> Horizontal transport within aisles`;
+            } else if (colorHex === 0xff8500) { // Bright orange - Buffer locations
+                objectType = 'Buffer Location';
+                objectDetails = `<strong>Type:</strong> Buffer Storage Location<br><strong>Function:</strong> Temporary storage near lift operations<br><strong>Priority:</strong> High-speed access for lift operations`;
             } else if (colorHex === 0x8b4513 || (colorHex >= 0x800000 && colorHex <= 0x8b7355)) { // Brown range - Picking Station
                 objectType = 'Picking Station';
-                objectDetails = `Ergonomic workstation for "goods-to-person" procedures`;
+                objectDetails = `<strong>Type:</strong> Ergonomic Workstation<br><strong>Function:</strong> Goods-to-person picking operations`;
             } else if (colorHex === 0x2c2c2c || colorHex === 0x404040 || (colorHex >= 0x1a1a1a && colorHex <= 0x404040)) { // Dark grey range - Conveyor
                 objectType = 'Prezone Conveyor';
-                objectDetails = `Conveyor system that connects the OSR to other areas`;
-            } else if ((colorHex === 0x444444 || colorHex === 0x888888) && !object.material.wireframe) { // Grey - Storage Location
+                objectDetails = `<strong>Type:</strong> Material Handling System<br><strong>Function:</strong> Connects OSR to external areas`;
+            } else if ((colorHex === 0x6e9075 || colorHex === 0xf1faee) && !object.material.wireframe) { // Green/Cream - Regular Storage Location
                 objectType = 'Storage Location';
-                objectDetails = `Single position in the rack for storing containers`;
+                objectDetails = `<strong>Type:</strong> Standard Storage Location<br><strong>Function:</strong> Regular container storage`;
             } else if (colorHex === 0x4a90e2 || colorHex === 0x50c878 || colorHex === 0xff6b6b) { // Container colors
-                objectType = 'Container';
-                objectDetails = `Storage container (${object.userData.containerType || 'unknown type'})`;
+                objectType = 'Storage Container';
+                objectDetails = `<strong>Type:</strong> Storage Container<br><strong>Container Type:</strong> ${object.userData?.containerType || 'Standard'}`;
+            }
+            // Check for rack frame components
+            else if (colorHex === 0x1e3231 || colorHex === 0xe5d1d0) { // Dark steel or aluminum frame
+                objectType = 'Rack Structure';
+                objectDetails = `<strong>Type:</strong> ${colorHex === 0x1e3231 ? 'Steel' : 'Aluminum'} Frame Component<br><strong>Function:</strong> Structural support for storage racks`;
             }
         }
-
-        // Check by userData type (for animated objects)
-        if (object.userData && object.userData.type) {
-            switch (object.userData.type) {
-                case 'shuttle':
-                    objectType = 'OSR Shuttle';
-                    objectDetails = `Autonomous vehicle - Aisle ${object.userData.aisleId}, Level ${object.userData.level}`;
-                    break;
-                case 'lift':
-                    objectType = 'Container Lift';
-                    objectDetails = `Vertical transporter - Aisle ${object.userData.aisleId}`;
-                    break;
-                case 'container':
-                    objectType = 'Container';
-                    objectDetails = `Storage container (${object.userData.containerType}) - ID: ${object.userData.containerId}`;
-                    break;
-            }
-        }
-
-        // Check by material properties and geometry size for frame components
+        
+        // Check by material properties and geometry size for frame components and modules
         if (object.material && !object.material.wireframe && object.geometry) {
             const box = new THREE.Box3().setFromObject(object);
             const size = box.getSize(new THREE.Vector3());
             
             // Check if it's a thin frame element (post, bottom frame, or side frame)
             if (size.x <= 0.15 || size.y <= 0.15 || size.z <= 0.15) {
-                objectType = 'Module Frame';
-                objectDetails = `Section of the rack with vertical posts that contains locations`;
+                objectType = 'Rack Module Frame';
+                objectDetails = `<strong>Type:</strong> Module Frame Component<br><strong>Function:</strong> Vertical posts and structural elements<br><strong>Module:</strong> Contains storage locations`;
+            }
+            // Check for larger module components
+            else if (size.x > 0.8 && size.y > 2.0 && size.z > 0.8) {
+                objectType = 'Storage Module';
+                objectDetails = `<strong>Type:</strong> Complete Storage Module<br><strong>Function:</strong> Houses multiple storage locations<br><strong>Dimensions:</strong> ${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)} units`;
             }
         }
 
-        // Check by geometry type and size as fallback
+        // Check by geometry type and size as fallback for equipment detection
         if (objectType === 'Unknown Component' && object.geometry) {
             if (object.geometry.type === 'BoxGeometry') {
                 const box = new THREE.Box3().setFromObject(object);
@@ -375,28 +433,27 @@ export class InteractionManager {
                 
                 if (size.y > 0.7 && size.x < 0.6) { // Tall and narrow - likely lift
                     objectType = 'Container Lift';
-                    objectDetails = `Vertical transporter that moves containers between levels`;
+                    objectDetails = `<strong>Type:</strong> Vertical Transporter<br><strong>Function:</strong> Moves containers between levels<br><strong>Dimensions:</strong> ${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)} units`;
                 } else if (size.z > 0.8 && size.y < 0.4) { // Long and low - likely shuttle
                     objectType = 'OSR Shuttle';
-                    objectDetails = `Autonomous vehicle that travels on rails within aisles`;
+                    objectDetails = `<strong>Type:</strong> Autonomous Rail Vehicle<br><strong>Function:</strong> Horizontal transport within aisles<br><strong>Dimensions:</strong> ${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)} units`;
                 } else if (size.x > 2 && size.y > 1) { // Large - likely picking station
                     objectType = 'Picking Station';
-                    objectDetails = `Ergonomic workstation for "goods-to-person" procedures`;
+                    objectDetails = `<strong>Type:</strong> Ergonomic Workstation<br><strong>Function:</strong> Goods-to-person picking operations<br><strong>Dimensions:</strong> ${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)} units`;
                 } else if (size.y < 0.5) { // Low height - likely conveyor
                     objectType = 'Prezone Conveyor';
-                    objectDetails = `Conveyor system that connects the OSR to other areas`;
+                    objectDetails = `<strong>Type:</strong> Material Handling System<br><strong>Function:</strong> Connects OSR to external areas<br><strong>Dimensions:</strong> ${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)} units`;
                 } else {
                     objectType = 'Storage Location';
-                    objectDetails = `Single position in the rack for storing containers`;
+                    objectDetails = `<strong>Type:</strong> Single Container Position<br><strong>Function:</strong> Stores one container in the rack<br><strong>Dimensions:</strong> ${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)} units`;
                 }
             }
         }
 
-        detailsDiv.innerHTML = `
-            <div><strong>Type:</strong> ${objectType}</div>
-            <div><strong>Details:</strong> ${objectDetails}</div>
-        `;
+        // Display the information
+        detailsDiv.innerHTML = `<h3>${objectType}</h3><div class="object-details-content">${objectDetails}</div>`;
         
         infoPanel.style.display = 'block';
+        console.log(`Selected: ${objectType}`, object);
     }
 }

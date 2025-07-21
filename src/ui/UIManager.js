@@ -10,11 +10,6 @@ export class UIManager {
             picking_stations: 3,
         };
         
-        // 📊 INITIAL CONFIG LOG - SEND THIS TO ME! 📊
-        console.log("🎛️ === INITIAL UI CONFIGURATION ===");
-        console.log("📋 Default uiConfig:", this.uiConfig);
-        console.log("🏁 === END INITIAL CONFIG ===");
-        
         this.createUI();
         this.updateStorageCapacity();
     }
@@ -115,14 +110,50 @@ export class UIManager {
                 font-family: Arial, sans-serif;
                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 z-index: 1000;
-                max-height: 80vh;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .ui-content {
+                transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+                max-height: calc(85vh - 80px); /* Account for header height */
+                opacity: 1;
                 overflow-y: auto;
+                overflow-x: hidden;
+                flex-grow: 1;
+                /* Custom scrollbar styling */
+                scrollbar-width: thin;
+                scrollbar-color: #6e9075 #e5d1d0;
+            }
+            
+            .ui-content::-webkit-scrollbar {
+                width: 8px;
+            }
+            
+            .ui-content::-webkit-scrollbar-track {
+                background: #e5d1d0;
+                border-radius: 4px;
+            }
+            
+            .ui-content::-webkit-scrollbar-thumb {
+                background: #6e9075;
+                border-radius: 4px;
+            }
+            
+            .ui-content::-webkit-scrollbar-thumb:hover {
+                background: #5a735f;
+            }
+            
+            .ui-content.collapsed {
+                max-height: 0;
+                opacity: 0;
+                overflow: hidden;
             }
             
             #ui-panel.collapsed {
                 height: auto;
                 max-height: none;
-                overflow: visible;
             }
             
             .ui-header {
@@ -132,6 +163,7 @@ export class UIManager {
                 margin-bottom: 20px;
                 padding-bottom: 10px;
                 border-bottom: 1px solid #6e9075;
+                flex-shrink: 0; /* Prevent header from shrinking */
             }
             
             .ui-header h2 {
@@ -159,18 +191,6 @@ export class UIManager {
             
             .toggle-btn:hover {
                 background: #6e0520;
-            }
-            
-            .ui-content {
-                transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
-                max-height: 1000px;
-                opacity: 1;
-                overflow: hidden;
-            }
-            
-            .ui-content.collapsed {
-                max-height: 0;
-                opacity: 0;
             }
             
             .ui-section {
@@ -242,6 +262,31 @@ export class UIManager {
             .level-input input {
                 width: 50%;
                 margin-right: 10px;
+            }
+            
+            #levels-container {
+                /* When there are many aisles, limit the height and add scroll */
+                max-height: 300px;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            
+            #levels-container::-webkit-scrollbar {
+                width: 6px;
+            }
+            
+            #levels-container::-webkit-scrollbar-track {
+                background: #f1faee;
+                border-radius: 3px;
+            }
+            
+            #levels-container::-webkit-scrollbar-thumb {
+                background: #93032e;
+                border-radius: 3px;
+            }
+            
+            #levels-container::-webkit-scrollbar-thumb:hover {
+                background: #6e0520;
             }
             
             .capacity-section {
@@ -527,11 +572,52 @@ export class UIManager {
 
     calculateStorageCapacity() {
         let total = 0;
-        for (let i = 0; i < this.uiConfig.aisles; i++) {
-            const levels = this.uiConfig.levels_per_aisle[i];
-            const capacity = levels * this.uiConfig.modules_per_aisle * this.uiConfig.locations_per_module * this.uiConfig.storage_depth * 2; // 2 sides per aisle
-            total += capacity;
+        
+        // Get missing locations and location types from SceneManager
+        const missingLocations = this.sceneManager.missingLocations || [];
+        const locationTypes = this.sceneManager.locationTypes || { buffer_locations: [], default_type: 'Storage' };
+        
+        // Helper function to check if a location is missing
+        const isLocationMissing = (aisle, level, module, depth, position) => {
+            return missingLocations.some(missing => {
+                const aisleMatch = Array.isArray(missing.aisle) ? 
+                    missing.aisle.includes(aisle) : 
+                    (missing.aisle === null || missing.aisle === aisle);
+                
+                const levelMatch = Array.isArray(missing.level) ? 
+                    missing.level.includes(level) : 
+                    (missing.level === null || missing.level === level);
+                
+                const moduleMatch = missing.module === null || missing.module === module;
+                const depthMatch = missing.depth === null || missing.depth === depth;
+                const positionMatch = missing.position === null || missing.position === position;
+                
+                return aisleMatch && levelMatch && moduleMatch && depthMatch && positionMatch;
+            });
+        };
+        
+        // Count actual available locations
+        for (let a = 0; a < this.uiConfig.aisles; a++) {
+            const levels = this.uiConfig.levels_per_aisle[a];
+            
+            for (let l = 0; l < levels; l++) {
+                for (let m = 0; m < this.uiConfig.modules_per_aisle; m++) {
+                    for (let d = 0; d < this.uiConfig.storage_depth; d++) {
+                        for (let s = 0; s < this.uiConfig.locations_per_module; s++) {
+                            // Count locations on both sides of the aisle (West and East)
+                            for (let side = 0; side < 2; side++) {
+                                // Check if this location is missing
+                                if (!isLocationMissing(a, l, m, d, s)) {
+                                    // Location exists, so count it
+                                    total++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
+        
         return total;
     }
 

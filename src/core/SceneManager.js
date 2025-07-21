@@ -293,28 +293,10 @@ export class SceneManager {
         this.warehouseGroup.position.x += (this.warehouseGroup.position.x - center.x);
         this.warehouseGroup.position.z += (this.warehouseGroup.position.z - center.z);
         
-        // 🏗️ WAREHOUSE STRUCTURE LOGS - SEND THESE TO ME! 🏗️
-        console.log("🏭 === WAREHOUSE STRUCTURE ANALYSIS ===");
-        console.log("📏 Constants used:", constants);
-        console.log("📋 uiConfig:", uiConfig);
-        console.log("📐 Calculated warehouse dimensions:");
-        console.log("  - moduleLength:", uiConfig.locations_per_module * constants.locationLength);
-        console.log("  - totalRackDepth:", uiConfig.storage_depth * constants.locationDepth);
-        console.log("  - rackAndAisleWidth:", (uiConfig.storage_depth * constants.locationDepth * 2) + constants.aisleWidth);
-        console.log("🏗️ Component positions:");
-        console.log("  - Racks position:", racks.position);
-        console.log("  - Prezone position:", prezone.position);
-        console.log("  - Transporters position:", transporters.position);
-        console.log("📦 Warehouse bounding box:", box);
-        console.log("📍 Warehouse center:", center);
-        console.log("🎯 Final warehouse group position:", this.warehouseGroup.position);
-        console.log("🏁 === END WAREHOUSE STRUCTURE ===");
-        
-        // 🤖 CREATE ANIMATED EQUIPMENT AFTER WAREHOUSE IS BUILT
+        // Create animated equipment after warehouse is built
         this.animationManager.createAnimatedEquipment(uiConfig);
         
         console.log('Warehouse built successfully');
-        console.log('Warehouse group position:', this.warehouseGroup.position);
     }
 
     updateTheme(isDark) {
@@ -332,19 +314,16 @@ export class SceneManager {
     // Method to add/remove missing locations dynamically
     updateMissingLocations(newMissingLocations) {
         this.missingLocations = newMissingLocations;
-        console.log("🚫 Updated missing locations:", this.missingLocations);
     }
 
     // Method to add a single missing location
     addMissingLocation(aisle, level, module, depth, position) {
         this.missingLocations.push({ aisle, level, module, depth, position });
-        console.log(`🚫 Added missing location: Aisle ${aisle}, Level ${level}, Module ${module}, Depth ${depth}, Position ${position}`);
     }
 
     // Method to clear all missing locations
     clearMissingLocations() {
         this.missingLocations = [];
-        console.log("✅ Cleared all missing locations");
     }
 
     // Methods to manage location types dynamically
@@ -382,13 +361,11 @@ export class SceneManager {
         this.locationTypes.buffer_locations.push({ 
             aisle, level, module, depth, position, type: 'Buffer' 
         });
-        console.log(`📦 Added Buffer location: Aisle ${aisle}, Level ${level}, Module ${module}, Depth ${depth}, Position ${position}`);
     }
 
     // Method to clear all buffer locations
     clearBufferLocations() {
         this.locationTypes.buffer_locations = [];
-        console.log("✅ Cleared all buffer locations");
     }
 
     // JSON Export/Import Methods for Warehouse Configurations
@@ -433,7 +410,7 @@ export class SceneManager {
         document.body.removeChild(downloadLink);
         URL.revokeObjectURL(url);
 
-        console.log("📤 Exported warehouse configuration:", warehouseConfig);
+        console.log("Configuration exported successfully");
         return warehouseConfig;
     }
 
@@ -456,7 +433,7 @@ export class SceneManager {
                     default_type: 'Storage'
                 };
 
-                console.log("📥 Imported warehouse configuration:", warehouseConfig);
+                console.log("Configuration imported successfully");
                 
                 // Call the callback with the imported configuration
                 if (callback) {
@@ -506,10 +483,48 @@ export class SceneManager {
 
     calculateTotalLocations(uiConfig) {
         let totalLocations = 0;
+        
+        // Helper function to check if a location is missing
+        const isLocationMissing = (aisle, level, module, depth, position) => {
+            return this.missingLocations.some(missing => {
+                const aisleMatch = Array.isArray(missing.aisle) ? 
+                    missing.aisle.includes(aisle) : 
+                    (missing.aisle === null || missing.aisle === aisle);
+                
+                const levelMatch = Array.isArray(missing.level) ? 
+                    missing.level.includes(level) : 
+                    (missing.level === null || missing.level === level);
+                
+                const moduleMatch = missing.module === null || missing.module === module;
+                const depthMatch = missing.depth === null || missing.depth === depth;
+                const positionMatch = missing.position === null || missing.position === position;
+                
+                return aisleMatch && levelMatch && moduleMatch && depthMatch && positionMatch;
+            });
+        };
+        
+        // Count actual available locations (excluding missing ones)
         for (let a = 0; a < uiConfig.aisles; a++) {
             const levels = uiConfig.levels_per_aisle[a];
-            totalLocations += levels * uiConfig.modules_per_aisle * uiConfig.locations_per_module * uiConfig.storage_depth * 2; // *2 for both sides of aisle
+            
+            for (let l = 0; l < levels; l++) {
+                for (let m = 0; m < uiConfig.modules_per_aisle; m++) {
+                    for (let d = 0; d < uiConfig.storage_depth; d++) {
+                        for (let s = 0; s < uiConfig.locations_per_module; s++) {
+                            // Count locations on both sides of the aisle (West and East)
+                            for (let side = 0; side < 2; side++) {
+                                // Check if this location is missing
+                                if (!isLocationMissing(a, l, m, d, s)) {
+                                    // Location exists, so count it
+                                    totalLocations++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
+        
         return totalLocations;
     }
 }
