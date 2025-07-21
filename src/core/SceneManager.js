@@ -390,4 +390,126 @@ export class SceneManager {
         this.locationTypes.buffer_locations = [];
         console.log("✅ Cleared all buffer locations");
     }
+
+    // JSON Export/Import Methods for Warehouse Configurations
+    exportWarehouseConfiguration(uiConfig, filename = 'warehouse_config.json') {
+        const warehouseConfig = {
+            metadata: {
+                name: filename.replace('.json', ''),
+                created: new Date().toISOString(),
+                version: '1.0.0',
+                description: 'Exported warehouse configuration'
+            },
+            warehouse_parameters: {
+                aisles: uiConfig.aisles,
+                levels_per_aisle: [...uiConfig.levels_per_aisle],
+                modules_per_aisle: uiConfig.modules_per_aisle,
+                locations_per_module: uiConfig.locations_per_module,
+                storage_depth: uiConfig.storage_depth,
+                picking_stations: uiConfig.picking_stations
+            },
+            missing_locations: [...this.missingLocations],
+            location_types: {
+                buffer_locations: [...this.locationTypes.buffer_locations],
+                default_type: this.locationTypes.default_type
+            },
+            calculated_metrics: {
+                total_locations: this.calculateTotalLocations(uiConfig),
+                total_modules: uiConfig.aisles * uiConfig.modules_per_aisle,
+                total_levels: uiConfig.levels_per_aisle.reduce((sum, levels) => sum + levels, 0)
+            }
+        };
+
+        // Create and download JSON file
+        const jsonString = JSON.stringify(warehouseConfig, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = filename;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(url);
+
+        console.log("📤 Exported warehouse configuration:", warehouseConfig);
+        return warehouseConfig;
+    }
+
+    importWarehouseConfiguration(jsonFile, callback) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const warehouseConfig = JSON.parse(event.target.result);
+                
+                // Validate the configuration structure
+                if (!this.validateWarehouseConfiguration(warehouseConfig)) {
+                    throw new Error('Invalid warehouse configuration format');
+                }
+
+                // Apply the configuration
+                const uiConfig = warehouseConfig.warehouse_parameters;
+                this.missingLocations = warehouseConfig.missing_locations || [];
+                this.locationTypes = warehouseConfig.location_types || {
+                    buffer_locations: [],
+                    default_type: 'Storage'
+                };
+
+                console.log("📥 Imported warehouse configuration:", warehouseConfig);
+                
+                // Call the callback with the imported configuration
+                if (callback) {
+                    callback(uiConfig, warehouseConfig);
+                }
+                
+            } catch (error) {
+                console.error("❌ Error importing warehouse configuration:", error);
+                alert(`Error importing configuration: ${error.message}`);
+            }
+        };
+        
+        reader.readAsText(jsonFile);
+    }
+
+    validateWarehouseConfiguration(config) {
+        // Check required structure
+        if (!config.warehouse_parameters) return false;
+        
+        const params = config.warehouse_parameters;
+        
+        // Validate required parameters
+        const requiredParams = ['aisles', 'levels_per_aisle', 'modules_per_aisle', 'locations_per_module', 'storage_depth', 'picking_stations'];
+        for (const param of requiredParams) {
+            if (!(param in params)) {
+                console.error(`Missing required parameter: ${param}`);
+                return false;
+            }
+        }
+
+        // Validate ranges
+        if (params.aisles < 1 || params.aisles > 8) return false;
+        if (params.modules_per_aisle < 3 || params.modules_per_aisle > 15) return false;
+        if (params.locations_per_module < 2 || params.locations_per_module > 8) return false;
+        if (params.storage_depth < 1 || params.storage_depth > 6) return false;
+        if (params.picking_stations < 1 || params.picking_stations > 8) return false;
+        
+        // Validate levels_per_aisle array
+        if (!Array.isArray(params.levels_per_aisle) || params.levels_per_aisle.length !== params.aisles) return false;
+        
+        for (const levels of params.levels_per_aisle) {
+            if (levels < 2 || levels > 12) return false;
+        }
+
+        return true;
+    }
+
+    calculateTotalLocations(uiConfig) {
+        let totalLocations = 0;
+        for (let a = 0; a < uiConfig.aisles; a++) {
+            const levels = uiConfig.levels_per_aisle[a];
+            totalLocations += levels * uiConfig.modules_per_aisle * uiConfig.locations_per_module * uiConfig.storage_depth * 2; // *2 for both sides of aisle
+        }
+        return totalLocations;
+    }
 }

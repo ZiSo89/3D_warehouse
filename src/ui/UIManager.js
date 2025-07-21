@@ -79,6 +79,15 @@ export class UIManager {
                     <!-- Equipment controls removed -->
                 </div>
 
+                <div class="ui-section configuration-section">
+                    <h4>Configuration:</h4>
+                    <div class="config-controls">
+                        <button id="export-config-btn" class="config-btn export-btn">📤 Export JSON</button>
+                        <button id="import-config-btn" class="config-btn import-btn">📥 Import JSON</button>
+                        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                    </div>
+                </div>
+
                 <div class="ui-section">
                     <button id="rebuild-btn" class="rebuild-button">Rebuild Warehouse</button>
                 </div>
@@ -312,6 +321,48 @@ export class UIManager {
             .rebuild-button:hover {
                 background: #5a735f;
             }
+
+            .configuration-section {
+                border-top: 2px solid #e5d1d0;
+                padding-top: 15px;
+                margin-top: 15px;
+            }
+
+            .config-controls {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .config-btn {
+                padding: 8px 12px;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.3s;
+                font-size: 13px;
+            }
+
+            .export-btn {
+                background: #1e3231;
+                color: #f1faee;
+            }
+
+            .export-btn:hover {
+                background: #2d4948;
+                transform: translateY(-1px);
+            }
+
+            .import-btn {
+                background: #93032e;
+                color: #f1faee;
+            }
+
+            .import-btn:hover {
+                background: #b8043a;
+                transform: translateY(-1px);
+            }
             
             .ui-section h4 {
                 margin: 0 0 10px 0;
@@ -395,6 +446,36 @@ export class UIManager {
                 animationManager.startContainerAnimation(this.uiConfig);
             } else {
                 animationManager.stopAnimation();
+            }
+        });
+
+        // Configuration Export/Import buttons
+        document.getElementById('export-config-btn').addEventListener('click', () => {
+            const filename = prompt('Enter filename for export:', 'warehouse_config.json');
+            if (filename) {
+                this.sceneManager.exportWarehouseConfiguration(this.uiConfig, filename);
+            }
+        });
+
+        document.getElementById('import-config-btn').addEventListener('click', () => {
+            document.getElementById('import-file-input').click();
+        });
+
+        document.getElementById('import-file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                this.sceneManager.importWarehouseConfiguration(file, (uiConfig, warehouseConfig) => {
+                    // Update UI with imported configuration
+                    this.uiConfig = uiConfig;
+                    this.updateUIFromConfig();
+                    this.updateStorageCapacity();
+                    this.sceneManager.buildWarehouse(this.uiConfig);
+                    
+                    // Show success message
+                    alert(`Successfully imported warehouse configuration: "${warehouseConfig.metadata.name}"`);
+                });
+                // Clear the file input
+                event.target.value = '';
             }
         });
 
@@ -499,5 +580,26 @@ export class UIManager {
         }
         
         controls.update();
+    }
+
+    updateUIFromConfig() {
+        // Update all slider values and displays
+        document.getElementById('aisles').value = this.uiConfig.aisles;
+        document.getElementById('aisles-value').textContent = this.uiConfig.aisles;
+        
+        document.getElementById('modules').value = this.uiConfig.modules_per_aisle;
+        document.getElementById('modules-value').textContent = this.uiConfig.modules_per_aisle;
+        
+        document.getElementById('locations').value = this.uiConfig.locations_per_module;
+        document.getElementById('locations-value').textContent = this.uiConfig.locations_per_module;
+        
+        document.getElementById('depth').value = this.uiConfig.storage_depth;
+        document.getElementById('depth-value').textContent = this.uiConfig.storage_depth;
+        
+        document.getElementById('stations').value = this.uiConfig.picking_stations;
+        document.getElementById('stations-value').textContent = this.uiConfig.picking_stations;
+        
+        // Update level inputs
+        this.updateLevelInputs();
     }
 }

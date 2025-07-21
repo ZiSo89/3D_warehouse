@@ -128,7 +128,6 @@ This project is open source and available under the [MIT License](LICENSE).
 
 - Multiple container animations simultaneously
 - Warehouse operation simulations with metrics
-- Export/import of warehouse configurations
 - Performance analytics and optimization suggestions
 - Integration with warehouse management systems
 - Real-time collision detection
