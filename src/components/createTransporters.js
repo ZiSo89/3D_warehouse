@@ -1,4 +1,76 @@
 import * as THREE from 'three';
+import { constants } from '../core/constants.js';
+
+/**
+ * Creates a 3D model for an OSR shuttle.
+ * The shuttle consists of a main body and two telescopic arms.
+ * @returns {THREE.Group} A group containing all parts of the shuttle.
+ */
+export function createShuttle() {
+    const shuttleGroup = new THREE.Group();
+
+    // Shuttle Body - main red body
+    const bodyGeometry = new THREE.BoxGeometry(0.6, 0.2, 1.0);
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xdc143c, // Crimson Red
+        metalness: 0.7,
+        roughness: 0.3
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.1;
+    shuttleGroup.add(body);
+
+    // Telescopic Arms (Flaps) - small gray arms for container handling
+    const armGeometry = new THREE.BoxGeometry(0.2, 0.1, 0.1);
+    const armMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x696969, // Dim Gray
+        metalness: 0.8,
+        roughness: 0.2
+    });
+    
+    const arm1 = new THREE.Mesh(armGeometry, armMaterial);
+    arm1.position.set(0.25, 0.1, 0.45); // Positioned at the front-right
+    arm1.name = 'telescopicArm1';
+    shuttleGroup.add(arm1);
+
+    const arm2 = new THREE.Mesh(armGeometry, armMaterial);
+    arm2.position.set(-0.25, 0.1, 0.45); // Positioned at the front-left
+    arm2.name = 'telescopicArm2';
+    shuttleGroup.add(arm2);
+
+    // Add userData for identification and status tracking
+    shuttleGroup.userData = {
+        type: 'shuttle',
+        status: 'Idle',
+        aisleId: null,
+        level: null
+    };
+
+    return shuttleGroup;
+}
+
+/**
+ * Creates a 3D model for a container lift.
+ * @returns {THREE.Mesh} The lift mesh.
+ */
+export function createLift() {
+    const liftGeometry = new THREE.BoxGeometry(constants.locationLength * 1.1, 0.8, constants.locationDepth * 1.1);
+    const liftMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffd700, // Gold
+        metalness: 0.8,
+        roughness: 0.3
+    });
+    const lift = new THREE.Mesh(liftGeometry, liftMaterial);
+
+    // Add userData for identification and status tracking
+    lift.userData = {
+        type: 'lift',
+        status: 'Idle',
+        aisleId: null
+    };
+
+    return lift;
+}
 
 export function createTransporters(uiConfig, constants) {
     const transportersGroup = new THREE.Group();

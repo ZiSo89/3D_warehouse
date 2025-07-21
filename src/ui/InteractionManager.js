@@ -312,6 +312,17 @@ export class InteractionManager {
             object.material = this.highlightMaterial;
         }
 
+        // Special handling for shuttle - trigger arm animation
+        if (object.userData && object.userData.type === 'shuttle') {
+            this.sceneManager.animationManager.animateShuttleArms(object, 'pick')
+                .then(() => {
+                    console.log('Shuttle arm animation completed');
+                })
+                .catch((error) => {
+                    console.warn('Shuttle arm animation failed:', error);
+                });
+        }
+
         // Show object info
         this.showObjectInfo(object);
     }
@@ -357,11 +368,15 @@ export class InteractionManager {
                 switch (userData.type) {
                     case 'shuttle':
                         objectType = 'OSR Shuttle';
-                        objectDetails = `<strong>Type:</strong> Autonomous Shuttle Vehicle<br><strong>Aisle:</strong> ${userData.aisleId ? userData.aisleId + 1 : 'Unknown'}<br><strong>Level:</strong> ${userData.level !== undefined ? userData.level + 1 : 'Unknown'}<br><strong>Status:</strong> ${userData.status || 'Operational'}`;
+                        objectDetails = `<strong>Type:</strong> Autonomous Shuttle Vehicle<br><strong>Aisle:</strong> ${userData.aisleId !== null ? userData.aisleId + 1 : 'Unknown'}<br><strong>Level:</strong> ${userData.level !== null ? userData.level + 1 : 'Unknown'}<br><strong>Status:</strong> ${userData.status || 'Idle'}`;
                         break;
                     case 'lift':
                         objectType = 'Container Lift';
-                        objectDetails = `<strong>Type:</strong> Vertical Transporter<br><strong>Aisle:</strong> ${userData.aisleId ? userData.aisleId + 1 : 'Unknown'}<br><strong>Function:</strong> Moves containers between levels<br><strong>Status:</strong> ${userData.status || 'Operational'}`;
+                        objectDetails = `<strong>Type:</strong> Vertical Transporter<br><strong>Aisle:</strong> ${userData.aisleId !== null ? userData.aisleId + 1 : 'Unknown'}<br><strong>Function:</strong> Moves containers between levels<br><strong>Status:</strong> ${userData.status || 'Idle'}`;
+                        break;
+                    case 'conveyor':
+                        objectType = `${userData.lineType === 'source' ? 'Source' : userData.lineType === 'target' ? 'Target' : 'Prezone'} Conveyor`;
+                        objectDetails = `<strong>Type:</strong> ${userData.lineType || 'Standard'} Conveyor Line<br><strong>Function:</strong> ${userData.lineType === 'source' ? 'Delivers containers from OSR to picking stations' : userData.lineType === 'target' ? 'Returns containers from picking stations to OSR' : 'Material handling system'}<br><strong>Controlled By:</strong> ${userData.controlledBy || 'PLC'} Process${userData.aisleId !== undefined ? `<br><strong>Serves Aisle:</strong> ${userData.aisleId + 1}` : ''}`;
                         break;
                     case 'container':
                         objectType = 'Storage Container';

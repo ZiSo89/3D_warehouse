@@ -736,4 +736,79 @@ export class AnimationManager {
             console.log(`🏗️ Created lift ${liftId} at PREZONE position (Z=0.5):`, lift.position);
         }
     }
+
+    /**
+     * Animates the telescopic arms of a shuttle for pick/place operations
+     * @param {THREE.Group} shuttleObject - The shuttle group object
+     * @param {string} action - 'pick' or 'place'
+     * @returns {Promise} Promise that resolves when animation completes
+     */
+    async animateShuttleArms(shuttleObject, action = 'pick') {
+        if (!shuttleObject || shuttleObject.userData.type !== 'shuttle') {
+            console.warn('Invalid shuttle object for arm animation');
+            return;
+        }
+
+        // Find the telescopic arms in the shuttle group
+        const arm1 = shuttleObject.getObjectByName('telescopicArm1');
+        const arm2 = shuttleObject.getObjectByName('telescopicArm2');
+
+        if (!arm1 || !arm2) {
+            console.warn('Telescopic arms not found in shuttle object');
+            return;
+        }
+
+        // Wait for TWEEN.js to be loaded
+        await this.loadTween();
+        if (!this.tweenJs) {
+            console.warn('TWEEN.js not available for arm animation');
+            return;
+        }
+
+        // Store original positions
+        const originalArm1Z = arm1.position.z;
+        const originalArm2Z = arm2.position.z;
+
+        // Animation parameters
+        const extensionDistance = 0.3; // How far the arms extend
+        const animationDuration = 500; // Duration in milliseconds
+
+        // Update shuttle status
+        const originalStatus = shuttleObject.userData.status;
+        shuttleObject.userData.status = action === 'pick' ? 'Picking' : 'Placing';
+
+        return new Promise((resolve) => {
+            // Extend arms animation
+            const extendTween = new this.tweenJs.Tween({ z: originalArm1Z })
+                .to({ z: originalArm1Z + extensionDistance }, animationDuration)
+                .easing(this.tweenJs.Easing.Quadratic.Out)
+                .onUpdate((coords) => {
+                    arm1.position.z = coords.z;
+                    arm2.position.z = coords.z;
+                })
+                .onComplete(() => {
+                    // Hold extended position briefly
+                    setTimeout(() => {
+                        // Retract arms animation
+                        const retractTween = new this.tweenJs.Tween({ z: originalArm1Z + extensionDistance })
+                            .to({ z: originalArm1Z }, animationDuration)
+                            .easing(this.tweenJs.Easing.Quadratic.In)
+                            .onUpdate((coords) => {
+                                arm1.position.z = coords.z;
+                                arm2.position.z = coords.z;
+                            })
+                            .onComplete(() => {
+                                // Restore original status
+                                shuttleObject.userData.status = originalStatus;
+                                console.log(`🦾 Shuttle arm animation complete: ${action}`);
+                                resolve();
+                            });
+                        retractTween.start();
+                    }, 300); // Hold for 300ms
+                });
+
+            extendTween.start();
+            console.log(`🦾 Animating shuttle arms: ${action}`);
+        });
+    }
 }

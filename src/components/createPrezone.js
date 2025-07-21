@@ -91,37 +91,72 @@ export function createPrezone(uiConfig, constants) {
     // Add main conveyors connecting picking stations to lifts (towards OSR)
     const conveyorLength = totalRackDepth + 5; // Extended length to reach beyond lifts
     
-    // Create horizontal conveyors that connect picking stations to each aisle
+    // Create SOURCE and TARGET conveyor lines for each aisle (steuer-controlled)
     for (let a = 0; a < uiConfig.aisles; a++) {
-        // Main horizontal conveyor from prezone to lift (towards OSR)
-        const mainConveyorGeometry = new THREE.BoxGeometry(conveyorWidth, conveyorHeight, conveyorLength);
-        const mainConveyor = new THREE.Mesh(mainConveyorGeometry, conveyorMaterial);
+        const aisleX = a * rackAndAisleWidth + totalRackDepth + (constants.aisleWidth / 2);
         
-        // Position conveyor to start from prezone and reach towards OSR (positive Z direction)
-        mainConveyor.position.set(
-            a * rackAndAisleWidth + totalRackDepth + (constants.aisleWidth / 2),
+        // SOURCE conveyor line (containers coming FROM OSR to picking stations)
+        const sourceConveyorGeometry = new THREE.BoxGeometry(conveyorWidth, conveyorHeight, conveyorLength);
+        const sourceConveyor = new THREE.Mesh(sourceConveyorGeometry, conveyorMaterial);
+        sourceConveyor.position.set(
+            aisleX - 0.5, // Offset left for source line
             conveyorHeight / 2,
-            conveyorLength / 2 + 1 // Start closer to prezone, extend towards OSR
+            conveyorLength / 2 + 1
         );
-        mainConveyor.castShadow = true;
-        mainConveyor.receiveShadow = true;
-        prezoneGroup.add(mainConveyor);
+        sourceConveyor.userData = {
+            type: 'conveyor',
+            lineType: 'source',
+            aisleId: a,
+            controlledBy: 'steuer'
+        };
+        sourceConveyor.castShadow = true;
+        sourceConveyor.receiveShadow = true;
+        prezoneGroup.add(sourceConveyor);
+        
+        // TARGET conveyor line (containers going TO OSR from picking stations)
+        const targetConveyorGeometry = new THREE.BoxGeometry(conveyorWidth, conveyorHeight, conveyorLength);
+        const targetConveyor = new THREE.Mesh(targetConveyorGeometry, beltMaterial); // Different color
+        targetConveyor.position.set(
+            aisleX + 0.5, // Offset right for target line
+            conveyorHeight / 2,
+            conveyorLength / 2 + 1
+        );
+        targetConveyor.userData = {
+            type: 'conveyor',
+            lineType: 'target',
+            aisleId: a,
+            controlledBy: 'steuer'
+        };
+        targetConveyor.castShadow = true;
+        targetConveyor.receiveShadow = true;
+        prezoneGroup.add(targetConveyor);
         
         // Add connecting conveyors between picking stations and main conveyors
         if (a < uiConfig.picking_stations) {
-            const connectionLength = Math.abs(mainConveyor.position.x - (a * (stationWidth + 1) - totalPrezoneWidth / 2 + stationWidth / 2));
+            const stationX = a * (stationWidth + 1) - totalPrezoneWidth / 2 + stationWidth / 2;
+            const connectionLength = Math.abs(aisleX - stationX);
             if (connectionLength > 0.5) { // Only create if there's significant distance
-                const connectionConveyorGeometry = new THREE.BoxGeometry(connectionLength, conveyorHeight, conveyorWidth);
-                const connectionConveyor = new THREE.Mesh(connectionConveyorGeometry, conveyorMaterial);
-                
-                connectionConveyor.position.set(
-                    (mainConveyor.position.x + (a * (stationWidth + 1) - totalPrezoneWidth / 2 + stationWidth / 2)) / 2,
+                // Connection to source line
+                const sourceConnectionGeometry = new THREE.BoxGeometry(connectionLength, conveyorHeight, conveyorWidth);
+                const sourceConnection = new THREE.Mesh(sourceConnectionGeometry, conveyorMaterial);
+                sourceConnection.position.set(
+                    (aisleX - 0.5 + stationX) / 2,
                     conveyorHeight / 2,
-                    1.5 // Position at the back of picking stations (OSR side)
+                    1.0 // Position closer to stations for source
                 );
-                connectionConveyor.castShadow = true;
-                connectionConveyor.receiveShadow = true;
-                prezoneGroup.add(connectionConveyor);
+                sourceConnection.userData = { type: 'conveyor', lineType: 'source_connection' };
+                prezoneGroup.add(sourceConnection);
+                
+                // Connection to target line
+                const targetConnectionGeometry = new THREE.BoxGeometry(connectionLength, conveyorHeight, conveyorWidth);
+                const targetConnection = new THREE.Mesh(targetConnectionGeometry, beltMaterial);
+                targetConnection.position.set(
+                    (aisleX + 0.5 + stationX) / 2,
+                    conveyorHeight / 2,
+                    2.0 // Position further back for target
+                );
+                targetConnection.userData = { type: 'conveyor', lineType: 'target_connection' };
+                prezoneGroup.add(targetConnection);
             }
         }
     }
