@@ -551,6 +551,13 @@ export class InteractionManager {
         detailsDiv.innerHTML = `<h3>${objectType}</h3><div class="object-details-content">${objectDetails}</div>`;
         
         infoPanel.style.display = 'block';
-        console.log(`Selected: ${objectType}`, object);
+        
+        // Log detailed position information
+        console.log(`🎯 Selected: ${objectType}`);
+        console.log(`📍 Position: X=${worldPosition.x.toFixed(3)}, Y=${worldPosition.y.toFixed(3)}, Z=${worldPosition.z.toFixed(3)}`);
+        if (object.userData && Object.keys(object.userData).length > 0) {
+            console.log(`📋 UserData:`, object.userData);
+        }
+        console.log(`🔧 Object:`, object);
     }
 }
