@@ -2,12 +2,45 @@ import * as THREE from 'three';
 
 export function createPrezone(uiConfig, constants) {
     const prezoneGroup = new THREE.Group();
-    prezoneGroup.name = 'PreZone'; // Set the name for the group
+    prezoneGroup.name = 'PreZone';
+    
+    // Enhanced dimensions for better spacing
     const stationWidth = 2.5;
     const stationDepth = 1.5;
     const stationHeight = 1.2;
     const conveyorHeight = 0.4;
-    const conveyorWidth = 0.8;
+    const conveyorWidth = 0.6; // Reduced width to prevent overlaps
+    const stationSpacing = 1.5; // Increased spacing between stations
+    
+    // Collision detection arrays
+    const occupiedPositions = [];
+    
+    // Helper function to check for collisions
+    const checkCollision = (position, size) => {
+        const newBounds = {
+            minX: position.x - size.x / 2,
+            maxX: position.x + size.x / 2,
+            minZ: position.z - size.z / 2,
+            maxZ: position.z + size.z / 2
+        };
+        
+        return occupiedPositions.some(existing => {
+            return !(newBounds.maxX < existing.minX || 
+                    newBounds.minX > existing.maxX || 
+                    newBounds.maxZ < existing.minZ || 
+                    newBounds.minZ > existing.maxZ);
+        });
+    };
+    
+    // Helper function to register occupied space
+    const registerPosition = (position, size) => {
+        occupiedPositions.push({
+            minX: position.x - size.x / 2,
+            maxX: position.x + size.x / 2,
+            minZ: position.z - size.z / 2,
+            maxZ: position.z + size.z / 2
+        });
+    };
 
     const stationMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x6e9075, // Medium green from palette
@@ -37,127 +70,133 @@ export function createPrezone(uiConfig, constants) {
         roughness: 0.4
     });
 
-    const totalPrezoneWidth = uiConfig.picking_stations * (stationWidth + 1); // Add spacing
+    const totalPrezoneWidth = uiConfig.picking_stations * (stationWidth + stationSpacing);
     const totalRackDepth = uiConfig.storage_depth * constants.locationDepth;
     const rackAndAisleWidth = (totalRackDepth * 2) + constants.aisleWidth;
 
+    // Create picking stations with collision detection
     for (let i = 0; i < uiConfig.picking_stations; i++) {
         const stationGroup = new THREE.Group();
-        stationGroup.name = `picking_station_${i}`; // Set the name for each station
+        stationGroup.name = `picking_station_${i}`;
 
-        // Picking station table
-        const deskGeometry = new THREE.BoxGeometry(stationWidth, stationHeight, stationDepth);
-        const desk = new THREE.Mesh(deskGeometry, stationMaterial);
-        desk.position.y = stationHeight / 2;
-        desk.castShadow = true;
-        desk.receiveShadow = true;
-        stationGroup.add(desk);
+        // Calculate station position with proper spacing
+        const stationX = i * (stationWidth + stationSpacing) - totalPrezoneWidth / 2 + stationWidth / 2;
+        const stationPosition = new THREE.Vector3(stationX, 0, 0);
+        const stationSize = new THREE.Vector3(stationWidth, stationHeight, stationDepth);
 
-        // Simplified conveyor belt section in front of the station
-        const conveyorGeometry = new THREE.BoxGeometry(stationWidth, conveyorHeight, conveyorWidth);
-        const conveyor = new THREE.Mesh(conveyorGeometry, conveyorMaterial);
-        conveyor.position.y = conveyorHeight / 2;
-        conveyor.position.z = -(stationDepth / 2 + conveyorWidth / 2 + 0.1);
-        conveyor.castShadow = true;
-        conveyor.receiveShadow = true;
-        stationGroup.add(conveyor);
+        // Check for collision before placing station
+        if (!checkCollision(stationPosition, stationSize)) {
+            // Picking station table
+            const deskGeometry = new THREE.BoxGeometry(stationWidth, stationHeight, stationDepth);
+            const desk = new THREE.Mesh(deskGeometry, stationMaterial);
+            desk.position.y = stationHeight / 2;
+            desk.castShadow = true;
+            desk.receiveShadow = true;
+            stationGroup.add(desk);
 
-        // Simplified conveyor belt section behind the station (connecting to OSR side)
-        const backConveyorGeometry = new THREE.BoxGeometry(stationWidth, conveyorHeight, conveyorWidth);
-        const backConveyor = new THREE.Mesh(backConveyorGeometry, conveyorMaterial);
-        backConveyor.position.y = conveyorHeight / 2;
-        backConveyor.position.z = (stationDepth / 2 + conveyorWidth / 2 + 0.1);
-        backConveyor.castShadow = true;
-        backConveyor.receiveShadow = true;
-        stationGroup.add(backConveyor);
-        
-        stationGroup.position.x = i * (stationWidth + 1) - totalPrezoneWidth / 2 + stationWidth / 2;
-        prezoneGroup.add(stationGroup);
+            // Register station position
+            registerPosition(stationPosition, stationSize);
+
+            // Front conveyor (towards operator)
+            const frontConveyorPos = new THREE.Vector3(
+                stationX, 
+                conveyorHeight / 2, 
+                -(stationDepth / 2 + conveyorWidth / 2 + 0.3)
+            );
+            const conveyorSize = new THREE.Vector3(stationWidth * 0.8, conveyorHeight, conveyorWidth);
+            
+            if (!checkCollision(frontConveyorPos, conveyorSize)) {
+                const conveyorGeometry = new THREE.BoxGeometry(stationWidth * 0.8, conveyorHeight, conveyorWidth);
+                const conveyor = new THREE.Mesh(conveyorGeometry, conveyorMaterial);
+                conveyor.position.copy(frontConveyorPos);
+                conveyor.castShadow = true;
+                conveyor.receiveShadow = true;
+                stationGroup.add(conveyor);
+                registerPosition(frontConveyorPos, conveyorSize);
+            }
+
+            // Back conveyor (towards OSR)
+            const backConveyorPos = new THREE.Vector3(
+                stationX, 
+                conveyorHeight / 2, 
+                (stationDepth / 2 + conveyorWidth / 2 + 0.3)
+            );
+            
+            if (!checkCollision(backConveyorPos, conveyorSize)) {
+                const backConveyorGeometry = new THREE.BoxGeometry(stationWidth * 0.8, conveyorHeight, conveyorWidth);
+                const backConveyor = new THREE.Mesh(backConveyorGeometry, conveyorMaterial);
+                backConveyor.position.copy(backConveyorPos);
+                backConveyor.castShadow = true;
+                backConveyor.receiveShadow = true;
+                stationGroup.add(backConveyor);
+                registerPosition(backConveyorPos, conveyorSize);
+            }
+
+            stationGroup.position.set(stationX, 0, 0);
+            prezoneGroup.add(stationGroup);
+        }
     }
 
-    // Add cross-conveyor connecting all picking stations (on OSR side)
+    // Add cross-conveyor connecting all picking stations (with collision detection)
     const crossConveyorLength = totalPrezoneWidth + 2;
-    const crossConveyorGeometry = new THREE.BoxGeometry(crossConveyorLength, conveyorHeight, conveyorWidth);
-    const crossConveyor = new THREE.Mesh(crossConveyorGeometry, conveyorMaterial);
-    crossConveyor.position.set(
-        0, // Center between all stations
-        conveyorHeight / 2,
-        2 // Position behind all stations (OSR side)
-    );
-    crossConveyor.castShadow = true;
-    crossConveyor.receiveShadow = true;
-    prezoneGroup.add(crossConveyor);
-
-    // Add main conveyors connecting picking stations to lifts (towards OSR)
-    const conveyorLength = totalRackDepth + 5; // Extended length to reach beyond lifts
+    const crossConveyorPos = new THREE.Vector3(0, conveyorHeight / 2, 3.5); // Moved further back
+    const crossConveyorSize = new THREE.Vector3(crossConveyorLength, conveyorHeight, conveyorWidth);
     
-    // Create SOURCE and TARGET conveyor lines for each aisle (steuer-controlled)
+    if (!checkCollision(crossConveyorPos, crossConveyorSize)) {
+        const crossConveyorGeometry = new THREE.BoxGeometry(crossConveyorLength, conveyorHeight, conveyorWidth);
+        const crossConveyor = new THREE.Mesh(crossConveyorGeometry, conveyorMaterial);
+        crossConveyor.position.copy(crossConveyorPos);
+        crossConveyor.castShadow = true;
+        crossConveyor.receiveShadow = true;
+        prezoneGroup.add(crossConveyor);
+        registerPosition(crossConveyorPos, crossConveyorSize);
+    }
+
+    // Create main conveyors with better spacing and collision detection
+    const conveyorLength = totalRackDepth + 6;
+    
     for (let a = 0; a < uiConfig.aisles; a++) {
-        const aisleX = a * rackAndAisleWidth + totalRackDepth + (constants.aisleWidth / 2);
+        const aisleBaseX = (a - (uiConfig.aisles - 1) / 2) * rackAndAisleWidth;
         
-        // SOURCE conveyor line (containers coming FROM OSR to picking stations)
-        const sourceConveyorGeometry = new THREE.BoxGeometry(conveyorWidth, conveyorHeight, conveyorLength);
-        const sourceConveyor = new THREE.Mesh(sourceConveyorGeometry, conveyorMaterial);
-        sourceConveyor.position.set(
-            aisleX - 0.5, // Offset left for source line
-            conveyorHeight / 2,
-            conveyorLength / 2 + 1
-        );
-        sourceConveyor.userData = {
-            type: 'conveyor',
-            lineType: 'source',
-            aisleId: a,
-            controlledBy: 'steuer'
-        };
-        sourceConveyor.castShadow = true;
-        sourceConveyor.receiveShadow = true;
-        prezoneGroup.add(sourceConveyor);
+        // SOURCE conveyor line (wider separation to prevent overlaps)
+        const sourceX = aisleBaseX - 1.0; // More separation
+        const sourcePos = new THREE.Vector3(sourceX, conveyorHeight / 2, conveyorLength / 2 + 2);
+        const sourceSize = new THREE.Vector3(conveyorWidth, conveyorHeight, conveyorLength);
         
-        // TARGET conveyor line (containers going TO OSR from picking stations)
-        const targetConveyorGeometry = new THREE.BoxGeometry(conveyorWidth, conveyorHeight, conveyorLength);
-        const targetConveyor = new THREE.Mesh(targetConveyorGeometry, beltMaterial); // Different color
-        targetConveyor.position.set(
-            aisleX + 0.5, // Offset right for target line
-            conveyorHeight / 2,
-            conveyorLength / 2 + 1
-        );
-        targetConveyor.userData = {
-            type: 'conveyor',
-            lineType: 'target',
-            aisleId: a,
-            controlledBy: 'steuer'
-        };
-        targetConveyor.castShadow = true;
-        targetConveyor.receiveShadow = true;
-        prezoneGroup.add(targetConveyor);
+        if (!checkCollision(sourcePos, sourceSize)) {
+            const sourceConveyorGeometry = new THREE.BoxGeometry(conveyorWidth, conveyorHeight, conveyorLength);
+            const sourceConveyor = new THREE.Mesh(sourceConveyorGeometry, conveyorMaterial);
+            sourceConveyor.position.copy(sourcePos);
+            sourceConveyor.userData = {
+                type: 'conveyor',
+                lineType: 'source',
+                aisleId: a,
+                controlledBy: 'steuer'
+            };
+            sourceConveyor.castShadow = true;
+            sourceConveyor.receiveShadow = true;
+            prezoneGroup.add(sourceConveyor);
+            registerPosition(sourcePos, sourceSize);
+        }
         
-        // Add connecting conveyors between picking stations and main conveyors
-        if (a < uiConfig.picking_stations) {
-            const stationX = a * (stationWidth + 1) - totalPrezoneWidth / 2 + stationWidth / 2;
-            const connectionLength = Math.abs(aisleX - stationX);
-            if (connectionLength > 0.5) { // Only create if there's significant distance
-                // Connection to source line
-                const sourceConnectionGeometry = new THREE.BoxGeometry(connectionLength, conveyorHeight, conveyorWidth);
-                const sourceConnection = new THREE.Mesh(sourceConnectionGeometry, conveyorMaterial);
-                sourceConnection.position.set(
-                    (aisleX - 0.5 + stationX) / 2,
-                    conveyorHeight / 2,
-                    1.0 // Position closer to stations for source
-                );
-                sourceConnection.userData = { type: 'conveyor', lineType: 'source_connection' };
-                prezoneGroup.add(sourceConnection);
-                
-                // Connection to target line
-                const targetConnectionGeometry = new THREE.BoxGeometry(connectionLength, conveyorHeight, conveyorWidth);
-                const targetConnection = new THREE.Mesh(targetConnectionGeometry, beltMaterial);
-                targetConnection.position.set(
-                    (aisleX + 0.5 + stationX) / 2,
-                    conveyorHeight / 2,
-                    2.0 // Position further back for target
-                );
-                targetConnection.userData = { type: 'conveyor', lineType: 'target_connection' };
-                prezoneGroup.add(targetConnection);
-            }
+        // TARGET conveyor line
+        const targetX = aisleBaseX + 1.0; // More separation
+        const targetPos = new THREE.Vector3(targetX, conveyorHeight / 2, conveyorLength / 2 + 2);
+        
+        if (!checkCollision(targetPos, sourceSize)) {
+            const targetConveyorGeometry = new THREE.BoxGeometry(conveyorWidth, conveyorHeight, conveyorLength);
+            const targetConveyor = new THREE.Mesh(targetConveyorGeometry, beltMaterial);
+            targetConveyor.position.copy(targetPos);
+            targetConveyor.userData = {
+                type: 'conveyor',
+                lineType: 'target',
+                aisleId: a,
+                controlledBy: 'steuer'
+            };
+            targetConveyor.castShadow = true;
+            targetConveyor.receiveShadow = true;
+            prezoneGroup.add(targetConveyor);
+            registerPosition(targetPos, sourceSize);
         }
     }
 

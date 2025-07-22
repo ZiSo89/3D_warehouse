@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createRacks } from '../components/createRacks.js';
 import { createPrezone } from '../components/createPrezone.js';
-import { createTransporters, createShuttle, createLift } from '../components/createTransporters.js';
+//import { createShuttle, createLift } from '../components/createTransporters.js';
 import { AnimationManager } from '../animation/AnimationManager.js';
 import { constants } from './constants.js';
 
@@ -284,12 +284,6 @@ export class SceneManager {
         prezone.position.z = - (uiConfig.storage_depth * constants.locationDepth) - 5;
         this.warehouseGroup.add(prezone);
 
-        // Create and position shuttles and lifts
-        this.addShuttlesAndLifts(uiConfig);
-
-        const transporters = createTransporters(uiConfig, constants);
-        this.warehouseGroup.add(transporters);
-
         // Center the warehouse (only X and Z, keep Y at ground level)
         const box = new THREE.Box3().setFromObject(this.warehouseGroup);
         const center = box.getCenter(new THREE.Vector3());
@@ -300,34 +294,6 @@ export class SceneManager {
         this.animationManager.createAnimatedEquipment(uiConfig);
         
         console.log('Warehouse built successfully');
-    }
-
-    addShuttlesAndLifts(uiConfig) {
-        // Add shuttles - one per aisle per level
-        for (let aisleIndex = 0; aisleIndex < uiConfig.aisles; aisleIndex++) {
-            // Add lift at the front of each aisle
-            const lift = createLift();
-            lift.userData.aisleId = aisleIndex;
-            
-            // Position lift at front of aisle (near prezone)
-            const aisleX = (aisleIndex - (uiConfig.aisles - 1) / 2) * (uiConfig.storage_depth * constants.locationDepth * 2 + constants.aisleWidth);
-            lift.position.set(aisleX, 0.4, -(uiConfig.storage_depth * constants.locationDepth) - 2);
-            
-            this.warehouseGroup.add(lift);
-
-            // Add shuttles - one per level in each aisle
-            for (let levelIndex = 0; levelIndex < uiConfig.levels; levelIndex++) {
-                const shuttle = createShuttle();
-                shuttle.userData.aisleId = aisleIndex;
-                shuttle.userData.level = levelIndex;
-                
-                // Position shuttle in the middle of the aisle at the correct level
-                const shuttleY = (levelIndex + 1) * constants.levelHeight + 0.1;
-                shuttle.position.set(aisleX, shuttleY, 0);
-                
-                this.warehouseGroup.add(shuttle);
-            }
-        }
     }
 
     updateTheme(isDark) {

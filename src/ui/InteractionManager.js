@@ -263,10 +263,74 @@ export class InteractionManager {
 
         this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
 
-        const intersects = this.raycaster.intersectObjects(this.sceneManager.warehouseGroup.children, true);
+        // Collect all objects to check for intersections
+        const objectsToCheck = [];
+        
+        // Add warehouse objects
+        objectsToCheck.push(...this.sceneManager.warehouseGroup.children);
+        
+        // Add animated equipment if available
+        if (this.sceneManager.animationManager) {
+            if (this.sceneManager.animationManager.shuttleGroup) {
+                objectsToCheck.push(...this.sceneManager.animationManager.shuttleGroup.children);
+            }
+            if (this.sceneManager.animationManager.liftGroup) {
+                objectsToCheck.push(...this.sceneManager.animationManager.liftGroup.children);
+            }
+        }
+
+        const intersects = this.raycaster.intersectObjects(objectsToCheck, true);
 
         if (intersects.length > 0) {
-            this.selectObject(intersects[0].object);
+            // Prioritize lifts and shuttles - look for them first in intersections
+            let selectedObject = null;
+            
+            for (let intersection of intersects) {
+                const obj = intersection.object;
+                // Check for transporters (lifts and shuttles) first
+                if (obj.userData && (obj.userData.type === 'lift' || obj.userData.type === 'shuttle')) {
+                    selectedObject = obj;
+                    break;
+                }
+            }
+            
+            // If no transporter found, check for storage locations and other components
+            if (!selectedObject) {
+                for (let intersection of intersects) {
+                    const obj = intersection.object;
+                    // Skip frame elements if they don't have proper userData
+                    if (obj.userData && Object.keys(obj.userData).length > 0 && obj.userData.type) {
+                        selectedObject = obj;
+                        break;
+                    }
+                    // Also include missing locations and color-coded objects
+                    else if (obj.material && obj.material.color) {
+                        const colorHex = obj.material.color.getHex();
+                        // Include all meaningful color-coded objects
+                        if (colorHex === 0xff4444 || colorHex === 0x8b0000 || // Missing locations
+                            colorHex === 0xffd700 || colorHex === 0xffff00 || // Lifts (gold/yellow)
+                            colorHex === 0xdc143c || colorHex === 0xff0000 || colorHex === 0x93032e || // Shuttles (red variants)
+                            colorHex === 0xff8500 || // Buffer locations
+                            (colorHex >= 0x800000 && colorHex <= 0x8b7355) || // Picking stations (brown range)
+                            (colorHex >= 0x1a1a1a && colorHex <= 0x404040) || // Conveyors (dark grey)
+                            (colorHex === 0x6e9075 || colorHex === 0xf1faee)) { // Storage locations
+                            selectedObject = obj;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // If still no object selected, use the first intersection (fallback)
+            if (!selectedObject && intersects.length > 0) {
+                selectedObject = intersects[0].object;
+            }
+            
+            if (selectedObject) {
+                this.selectObject(selectedObject);
+            } else {
+                this.deselectObject();
+            }
         } else {
             this.deselectObject();
         }
@@ -314,13 +378,21 @@ export class InteractionManager {
 
         // Special handling for shuttle - trigger arm animation
         if (object.userData && object.userData.type === 'shuttle') {
-            this.sceneManager.animationManager.animateShuttleArms(object, 'pick')
-                .then(() => {
-                    console.log('Shuttle arm animation completed');
-                })
-                .catch((error) => {
-                    console.warn('Shuttle arm animation failed:', error);
-                });
+            if (this.sceneManager.animationManager && this.sceneManager.animationManager.animateShuttleArms) {
+                this.sceneManager.animationManager.animateShuttleArms(object, 'pick')
+                    .then(() => {
+                        console.log('Shuttle arm animation completed');
+                    })
+                    .catch((error) => {
+                        console.warn('Shuttle arm animation failed:', error);
+                    });
+            }
+        }
+
+        // Special handling for lift - could add lift movement animation here
+        if (object.userData && object.userData.type === 'lift') {
+            console.log('Container Lift selected - ready for operations');
+            // Could add lift animation here in the future
         }
 
         // Show object info
@@ -355,12 +427,18 @@ export class InteractionManager {
             
             // Storage Location with detailed info
             if (userData.type && userData.aisle !== undefined) {
-                objectType = `${userData.type} Location`;
-                objectDetails = `<strong>Type:</strong> ${userData.type}<br><strong>Coordinates:</strong> Aisle ${userData.aisle + 1}, Level ${userData.level + 1}, Module ${userData.module + 1}<br><strong>Position:</strong> Depth ${userData.depth + 1}, Slot ${userData.position + 1}`;
-                
-                // Add Buffer location specific info
-                if (userData.type === 'Buffer') {
-                    objectDetails += `<br><strong>Function:</strong> Buffer zone near lift operations`;
+                // Check for missing location
+                if (userData.location_type === 'Missing Location') {
+                    objectType = 'Missing Location';
+                    objectDetails = `<strong>Type:</strong> Unavailable Storage Position<br><strong>Coordinates:</strong> Aisle ${userData.aisle + 1}, Level ${userData.level + 1}, Module ${userData.module + 1}<br><strong>Position:</strong> Depth ${userData.depth + 1}, Slot ${userData.position + 1}<br><strong>Status:</strong> ${userData.status}<br><strong>Reason:</strong> Building obstacle or restricted area`;
+                } else {
+                    objectType = `${userData.type} Location`;
+                    objectDetails = `<strong>Type:</strong> ${userData.type}<br><strong>Coordinates:</strong> Aisle ${userData.aisle + 1}, Level ${userData.level + 1}, Module ${userData.module + 1}<br><strong>Position:</strong> Depth ${userData.depth + 1}, Slot ${userData.position + 1}`;
+                    
+                    // Add Buffer location specific info
+                    if (userData.type === 'Buffer') {
+                        objectDetails += `<br><strong>Function:</strong> Buffer zone near lift operations`;
+                    }
                 }
             }
             // Animated equipment (shuttles, lifts, etc.)
@@ -368,11 +446,11 @@ export class InteractionManager {
                 switch (userData.type) {
                     case 'shuttle':
                         objectType = 'OSR Shuttle';
-                        objectDetails = `<strong>Type:</strong> Autonomous Shuttle Vehicle<br><strong>Aisle:</strong> ${userData.aisleId !== null ? userData.aisleId + 1 : 'Unknown'}<br><strong>Level:</strong> ${userData.level !== null ? userData.level + 1 : 'Unknown'}<br><strong>Status:</strong> ${userData.status || 'Idle'}`;
+                        objectDetails = `<strong>Type:</strong> Autonomous Shuttle Vehicle<br><strong>Aisle:</strong> ${userData.aisleId !== null ? userData.aisleId + 1 : 'Multiple/Available'}<br><strong>Level:</strong> ${userData.level !== null ? userData.level + 1 : 'All Levels'}<br><strong>Status:</strong> ${userData.status || 'Idle'}<br><strong>Function:</strong> Horizontal transport within aisles<br><strong>Capability:</strong> Telescopic arms for container handling`;
                         break;
                     case 'lift':
                         objectType = 'Container Lift';
-                        objectDetails = `<strong>Type:</strong> Vertical Transporter<br><strong>Aisle:</strong> ${userData.aisleId !== null ? userData.aisleId + 1 : 'Unknown'}<br><strong>Function:</strong> Moves containers between levels<br><strong>Status:</strong> ${userData.status || 'Idle'}`;
+                        objectDetails = `<strong>Type:</strong> Vertical Transporter<br><strong>Aisle:</strong> ${userData.aisleId !== null ? userData.aisleId + 1 : 'Multiple/Available'}<br><strong>Function:</strong> Moves containers between levels<br><strong>Status:</strong> ${userData.status || 'Idle'}<br><strong>Capacity:</strong> Single container per trip<br><strong>Operation:</strong> Automated vertical positioning`;
                         break;
                     case 'conveyor':
                         objectType = `${userData.lineType === 'source' ? 'Source' : userData.lineType === 'target' ? 'Target' : 'Prezone'} Conveyor`;
@@ -385,21 +463,25 @@ export class InteractionManager {
                 }
             }
         }
-        // Check for missing location obstacles (red columns)
+        // Check for missing location obstacles and equipment by color
         else if (object.material && object.material.color) {
             const colorHex = object.material.color.getHex();
             
-            if (colorHex === 0x8b0000) { // Dark red - Missing location obstacle
+            if (colorHex === 0xff4444) { // Light red - Missing location (new transparent boxes)
+                objectType = 'Missing Location';
+                objectDetails = `<strong>Type:</strong> Unavailable Storage Position<br><strong>Reason:</strong> Building obstacle or restricted area<br><strong>Status:</strong> Permanently unavailable for storage<br><strong>Visual:</strong> Transparent placeholder showing blocked space`;
+            }
+            else if (colorHex === 0x8b0000) { // Dark red - Old missing location obstacles
                 objectType = 'Missing Location';
                 objectDetails = `<strong>Type:</strong> Blocked/Unavailable Location<br><strong>Reason:</strong> Building obstacle (column, lift shaft, etc.)<br><strong>Status:</strong> Permanently unavailable for storage`;
             }
-            // Check other object types by color
+            // Check for transporters by color
             else if (colorHex === 0xffd700 || colorHex === 0xffff00) { // Gold/Yellow - Lift
                 objectType = 'Container Lift';
-                objectDetails = `<strong>Type:</strong> Vertical Transporter<br><strong>Function:</strong> Moves containers between levels`;
-            } else if (colorHex === 0xdc143c || colorHex === 0xff0000) { // Red - Shuttle
+                objectDetails = `<strong>Type:</strong> Vertical Transporter<br><strong>Function:</strong> Moves containers between levels<br><strong>Status:</strong> Operational<br><strong>Capacity:</strong> Single container per trip<br><strong>Operation:</strong> Automated vertical positioning`;
+            } else if (colorHex === 0xdc143c || colorHex === 0xff0000 || colorHex === 0x93032e) { // Red variants - Shuttle
                 objectType = 'OSR Shuttle';
-                objectDetails = `<strong>Type:</strong> Autonomous Rail Vehicle<br><strong>Function:</strong> Horizontal transport within aisles`;
+                objectDetails = `<strong>Type:</strong> Autonomous Rail Vehicle<br><strong>Function:</strong> Horizontal transport within aisles<br><strong>Status:</strong> Operational<br><strong>Capability:</strong> Telescopic arms for container handling<br><strong>Movement:</strong> Rail-guided along rack aisles`;
             } else if (colorHex === 0xff8500) { // Bright orange - Buffer locations
                 objectType = 'Buffer Location';
                 objectDetails = `<strong>Type:</strong> Buffer Storage Location<br><strong>Function:</strong> Temporary storage near lift operations<br><strong>Priority:</strong> High-speed access for lift operations`;

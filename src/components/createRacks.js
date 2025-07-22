@@ -144,23 +144,43 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                         for (let s = 0; s < uiConfig.locations_per_module; s++) {
                             // Check if this location should be missing
                             if (isLocationMissing(a, l, m, d, s)) {
-                                // Create a visual indicator for missing location (optional column/obstacle)
+                                // Create a transparent/ghost box for missing location
                                 if (uiConfig.showMissingIndicators !== false) {
-                                    const obstacleGeometry = new THREE.CylinderGeometry(0.2, 0.3, constants.levelHeight * levels, 8);
-                                    const obstacleMaterial = new THREE.MeshStandardMaterial({
-                                        color: 0x8b0000, // Dark red for obstacles
-                                        metalness: 0.1,
-                                        roughness: 0.9
+                                    const missingLocationGeometry = new THREE.BoxGeometry(
+                                        constants.locationLength * 0.95,
+                                        0.8,
+                                        constants.locationDepth * 0.95
+                                    );
+                                    const missingLocationMaterial = new THREE.MeshStandardMaterial({
+                                        color: 0xff4444, // Light red color
+                                        transparent: true,
+                                        opacity: 0.15, // Very low opacity (15%)
+                                        metalness: 0.2,
+                                        roughness: 0.8,
+                                        side: THREE.DoubleSide
                                     });
-                                    const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-                                    obstacle.position.set(
+                                    const missingBox = new THREE.Mesh(missingLocationGeometry, missingLocationMaterial);
+                                    missingBox.position.set(
                                         (d * constants.locationDepth) + (constants.locationDepth / 2),
-                                        (constants.levelHeight * levels) / 2,
+                                        (l * constants.levelHeight) + (constants.levelHeight / 2),
                                         (s * constants.locationLength) + (constants.locationLength / 2)
                                     );
-                                    obstacle.castShadow = true;
-                                    obstacle.receiveShadow = true;
-                                    moduleGroup.add(obstacle);
+                                    missingBox.castShadow = true;
+                                    missingBox.receiveShadow = true;
+                                    
+                                    // Add metadata for interaction
+                                    missingBox.userData = {
+                                        type: 'Storage Location',
+                                        aisle: a,
+                                        level: l, 
+                                        module: m,
+                                        depth: d,
+                                        position: s,
+                                        location_type: 'Missing Location',
+                                        status: 'Unavailable'
+                                    };
+                                    
+                                    moduleGroup.add(missingBox);
                                 }
                                 continue; // Skip creating the storage location
                             }
