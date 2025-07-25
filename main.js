@@ -4,9 +4,9 @@ import { SceneManager } from './src/core/SceneManager.js';
 import { UIManager } from './src/ui/UIManager.js';
 import { InteractionManager } from './src/ui/InteractionManager.js';
 
-const sceneManager = new SceneManager();
-sceneManager.init();
 
+const sceneManager = new SceneManager();
+document.body.appendChild(sceneManager.renderer.domElement);
 // Initialize UI Manager
 const uiManager = new UIManager(sceneManager);
 
@@ -15,3 +15,6 @@ const interactionManager = new InteractionManager(sceneManager, uiManager);
 
 // Build initial warehouse with UI config
 sceneManager.buildWarehouse(uiManager.getConfig());
+sceneManager.fitToWarehouseView();
+
+

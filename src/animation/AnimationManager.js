@@ -85,10 +85,11 @@ export class AnimationManager {
         const startModuleZ = Math.floor(uiConfig.modules_per_aisle / 2) * moduleLength;
         const prezoneZ = -prezoneOffset + warehouseOffset.z;
 
-        console.log("🏭 === WAREHOUSE CALCULATIONS ===");
-        console.log(`📏 Prezone offset: ${prezoneOffset.toFixed(2)}`);
-        console.log(`📏 Warehouse offset: X=${warehouseOffset.x.toFixed(2)}, Z=${warehouseOffset.z.toFixed(2)}`);
-        console.log(`📏 Prezone Z position: ${prezoneZ.toFixed(2)}`);
+        // Debug: Warehouse calculations
+        // console.log("🏭 === WAREHOUSE CALCULATIONS ===");
+        // console.log(`📏 Prezone offset: ${prezoneOffset.toFixed(2)}`);
+        // console.log(`📏 Warehouse offset: X=${warehouseOffset.x.toFixed(2)}, Z=${warehouseOffset.z.toFixed(2)}`);
+        // console.log(`📏 Prezone Z position: ${prezoneZ.toFixed(2)}`);
 
         // Starting position (picking station in prezone) - FIXED CALCULATION
         const stationWidth = 2.5;
@@ -100,7 +101,8 @@ export class AnimationManager {
             z: prezoneZ 
         };
 
-        console.log("� === EQUIPMENT ALIGNMENT ANALYSIS ===");
+        // Debug: Equipment alignment analysis
+        // console.log("� === EQUIPMENT ALIGNMENT ANALYSIS ===");
         this.logEquipmentPositions(uiConfig, warehouseOffset, targetAisle, aisleCenterX);
 
         this.animationContainer.position.set(startPos.x, startPos.y, startPos.z);
@@ -224,21 +226,9 @@ export class AnimationManager {
             z: targetModuleZ
         };
 
-        console.log("🎬 === CONTAINER POSITION TRACKING ===");
-        console.log(`📦 START Position: X=${startPos.x.toFixed(2)}, Y=${startPos.y.toFixed(2)}, Z=${startPos.z.toFixed(2)}`);
-        console.log(`📦 STEP 1 - Front: X=${stepFront.x.toFixed(2)}, Y=${stepFront.y.toFixed(2)}, Z=${stepFront.z.toFixed(2)}`);
-        console.log(`📦 STEP 2 - Left: X=${stepLeft.x.toFixed(2)}, Y=${stepLeft.y.toFixed(2)}, Z=${stepLeft.z.toFixed(2)}`);
-        console.log(`📦 STEP 3 - Cross-Conveyor: X=${stepCrossConveyor.x.toFixed(2)}, Y=${stepCrossConveyor.y.toFixed(2)}, Z=${stepCrossConveyor.z.toFixed(2)}`);
-        console.log(`📦 STEP 4 - Lift: X=${stepLift.x.toFixed(2)}, Y=${stepLift.y.toFixed(2)}, Z=${stepLift.z.toFixed(2)}`);
-        console.log(`📦 STEP 5 - Lift Up: X=${step4.x.toFixed(2)}, Y=${step4.y.toFixed(2)}, Z=${step4.z.toFixed(2)}`);
-        console.log(`📦 STEP 6 - Shuttle Pickup: X=${step5.x.toFixed(2)}, Y=${step5.y.toFixed(2)}, Z=${step5.z.toFixed(2)}`);
-        console.log(`📦 STEP 7 - Shuttle Move: X=${step6.x.toFixed(2)}, Y=${step6.y.toFixed(2)}, Z=${step6.z.toFixed(2)}`);
-        console.log(`📦 STEP 8 - Storage: X=${step7.x.toFixed(2)}, Y=${step7.y.toFixed(2)}, Z=${step7.z.toFixed(2)}`);
-
-        // Log equipment positions for comparison
-        console.log("🏗️ === EQUIPMENT POSITIONS ===");
-        console.log(`🏗️ Lift Position: X=${liftX.toFixed(2)}, Y=1.0, Z=${liftZ.toFixed(2)}`);
-        console.log(`🚛 Shuttle Position: X=${shuttleX.toFixed(2)}, Y=${levelY.toFixed(2)}, Z=${shuttleZ.toFixed(2)}`);
+        // Debug: Container position tracking and equipment positions
+        // console.log("� === CONTAINER POSITION TRACKING ===");
+        // ...existing code for debug logs...
 
         // Find the lift and shuttle that need to move
 
@@ -250,10 +240,11 @@ export class AnimationManager {
         if (activeLift) activeLift.visible = true;
         if (activeShuttle) activeShuttle.visible = true;
 
-        console.log("🏗️ Equipment for animation:", {
-            activeLift: activeLift ? "FOUND" : "NOT FOUND",
-            activeShuttle: activeShuttle ? "FOUND" : "NOT FOUND"
-        });
+        // Debug: Equipment for animation
+        // console.log("🏗️ Equipment for animation:", {
+        //     activeLift: activeLift ? "FOUND" : "NOT FOUND",
+        //     activeShuttle: activeShuttle ? "FOUND" : "NOT FOUND"
+        // });
 
         // Create tweens with position logging
 
@@ -286,14 +277,14 @@ export class AnimationManager {
                 tweenLiftUpLift = new this.tweenJs.Tween(activeLift.position)
                     .to({ x: liftX, y: higherLevelY, z: liftZ }, step.duration)
                     .easing(this.tweenJs.Easing.Sinusoidal.InOut)
-                    .onUpdate(() => {
-                        const pos = activeLift.position;
-                        console.log(`🔄 LIFT Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
-                    })
-                    .onComplete(() => {
-                        const pos = activeLift.position;
-                        console.log(`🏗️ LIFT Complete: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
-                    });
+                    // .onUpdate(() => {
+                    //     const pos = activeLift.position;
+                    //     console.log(`🔄 LIFT Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    // })
+                    // .onComplete(() => {
+                    //     const pos = activeLift.position;
+                    //     console.log(`🏗️ LIFT Complete: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    // });
             }
 
             // STEP 5: ShuttlePickup - animate shuttle moving to lift
@@ -301,14 +292,14 @@ export class AnimationManager {
                 tween5Shuttle = new this.tweenJs.Tween(activeShuttle.position)
                     .to({ x: liftX, y: higherLevelY, z: liftZ }, step.duration)
                     .easing(this.tweenJs.Easing.Quadratic.InOut)
-                    .onUpdate(() => {
-                        const pos = activeShuttle.position;
-                        console.log(`🔄 SHUTTLE STEP 5 Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
-                    })
-                    .onComplete(() => {
-                        const pos = activeShuttle.position;
-                        console.log(`🚀 SHUTTLE picked up container: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
-                    });
+                    // .onUpdate(() => {
+                    //     const pos = activeShuttle.position;
+                    //     console.log(`🔄 SHUTTLE STEP 5 Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    // })
+                    // .onComplete(() => {
+                    //     const pos = activeShuttle.position;
+                    //     console.log(`🚀 SHUTTLE picked up container: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    // });
             }
 
             // STEP 6: ShuttleMove - animate shuttle and container together
@@ -316,27 +307,27 @@ export class AnimationManager {
                 tween6Shuttle = new this.tweenJs.Tween(activeShuttle.position)
                     .to({ x: shuttleX, y: higherLevelY, z: targetModuleZ }, step.duration)
                     .easing(this.tweenJs.Easing.Quadratic.InOut)
-                    .onUpdate(() => {
-                        const pos = activeShuttle.position;
-                        console.log(`� SHUTTLE Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
-                    })
-                    .onComplete(() => {
-                        const pos = activeShuttle.position;
-                        console.log(`🚀 SHUTTLE Complete: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
-                    });
+                    // .onUpdate(() => {
+                    //     const pos = activeShuttle.position;
+                    //     console.log(`� SHUTTLE Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    // })
+                    // .onComplete(() => {
+                    //     const pos = activeShuttle.position;
+                    //     console.log(`🚀 SHUTTLE Complete: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                    // });
             }
 
             const tween = new this.tweenJs.Tween(this.animationContainer.position)
                 .to(step.to, step.duration)
                 .easing(easingFn)
-                .onUpdate(() => {
-                    const pos = this.animationContainer.position;
-                    console.log(`🔄 STEP ${idx + 1} (${step.name}) Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
-                })
-                .onComplete(() => {
-                    const pos = this.animationContainer.position;
-                    console.log(`✅ STEP ${idx + 1} (${step.name}) Complete: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
-                });
+                // .onUpdate(() => {
+                //     const pos = this.animationContainer.position;
+                //     console.log(`🔄 STEP ${idx + 1} (${step.name}) Update: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                // })
+                // .onComplete(() => {
+                //     const pos = this.animationContainer.position;
+                //     console.log(`✅ STEP ${idx + 1} (${step.name}) Complete: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
+                // });
             tweens.push(tween);
             if (prevTween) prevTween.chain(tween);
             prevTween = tween;
@@ -344,9 +335,7 @@ export class AnimationManager {
 
         // Final step: Place in storage
         tweens[tweens.length - 1].onComplete(() => {
-            const pos = this.animationContainer.position;
-            console.log(`✅ STEP ${tweens.length} (Storage) STORED: X=${pos.x.toFixed(2)}, Y=${pos.y.toFixed(2)}, Z=${pos.z.toFixed(2)}`);
-            console.log("🎉 === ANIMATION COMPLETED ===");
+            // Animation complete
             this.isAnimating = false;
             // Reset container to default position
             if (this.animationContainer && startPos) {
@@ -392,19 +381,20 @@ export class AnimationManager {
     }
 
     logEquipmentPositions(uiConfig, warehouseOffset, targetAisle, aisleCenterX, prezoneOffset) {
-        console.log("📍 === EQUIPMENT POSITIONS FOR ALIGNMENT CHECK ===");
+        // Debug: Equipment positions for alignment check
+        // console.log("📍 === EQUIPMENT POSITIONS FOR ALIGNMENT CHECK ===");
         
         // Log Picking Stations (from prezone) - FIXED CALCULATION
         const stationWidth = 2.5;
         const totalPrezoneWidth = uiConfig.picking_stations * (stationWidth + 1);
         for (let i = 0; i < uiConfig.picking_stations; i++) {
             const stationX = i * (stationWidth + 1) - totalPrezoneWidth / 2 + stationWidth / 2 + warehouseOffset.x;
-            console.log(`🏪 Picking Station ${i + 1}: X=${stationX.toFixed(2)}, Z=${(-prezoneOffset + warehouseOffset.z).toFixed(2)}`);
+            // console.log(`🏪 Picking Station ${i + 1}: X=${stationX.toFixed(2)}, Z=${(-prezoneOffset + warehouseOffset.z).toFixed(2)}`);
         }
 
         // Log Cross-Conveyor position
         const crossConveyorZ = 1 + warehouseOffset.z;
-        console.log(`🚚 Cross-Conveyor: Z=${crossConveyorZ.toFixed(2)} (at conveyor start)`);
+        // console.log(`🚚 Cross-Conveyor: Z=${crossConveyorZ.toFixed(2)} (at conveyor start)`);
 
         // Log Main Conveyors
         const rackAndAisleWidth = (uiConfig.storage_depth * 0.8 * 2) + 2.5;
@@ -415,14 +405,14 @@ export class AnimationManager {
             const conveyorX = a * rackAndAisleWidth + totalRackDepth + 1.25 + warehouseOffset.x;
             const conveyorStartZ = 1 + warehouseOffset.z;
             const conveyorEndZ = conveyorLength + 1 + warehouseOffset.z;
-            console.log(`🛤️ Aisle ${a + 1} Conveyor: X=${conveyorX.toFixed(2)}, Z=${conveyorStartZ.toFixed(2)} to ${conveyorEndZ.toFixed(2)}`);
+            // console.log(`🛤️ Aisle ${a + 1} Conveyor: X=${conveyorX.toFixed(2)}, Z=${conveyorStartZ.toFixed(2)} to ${conveyorEndZ.toFixed(2)}`);
         }
 
         // Log Lifts
         for (let a = 0; a < uiConfig.aisles; a++) {
             const liftX = a * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
             const liftZ = 0.5 + warehouseOffset.z;
-            console.log(`🏗️ Lift ${a + 1}: X=${liftX.toFixed(2)}, Y=1.0, Z=${liftZ.toFixed(2)}`);
+            // console.log(`🏗️ Lift ${a + 1}: X=${liftX.toFixed(2)}, Y=1.0, Z=${liftZ.toFixed(2)}`);
         }
 
         // Log Shuttles for target aisle
@@ -432,22 +422,22 @@ export class AnimationManager {
         
         for (let l = 0; l < Math.min(levels, 3); l++) {
             const levelY = (l * 1.0) + (1.0 / 2);
-            console.log(`🚛 Aisle ${targetAisle + 1} Shuttle Level ${l + 1}: X=${shuttleX.toFixed(2)}, Y=${levelY.toFixed(2)}, Z=${shuttleZ.toFixed(2)}`);
+            // console.log(`🚛 Aisle ${targetAisle + 1} Shuttle Level ${l + 1}: X=${shuttleX.toFixed(2)}, Y=${levelY.toFixed(2)}, Z=${shuttleZ.toFixed(2)}`);
         }
 
         // Log Container Target Points
-        console.log("📦 === CONTAINER ANIMATION TARGETS ===");
-        console.log(`📍 Target Aisle: ${targetAisle + 1}`);
-        console.log(`📍 Aisle Center X: ${aisleCenterX.toFixed(2)}`);
-        console.log(`📍 Expected Lift Position: X=${aisleCenterX.toFixed(2)}, Z=0.5`);
-        console.log(`📍 Expected Shuttle Position: X=${aisleCenterX.toFixed(2)}, Z=5.0`);
+        // console.log("📦 === CONTAINER ANIMATION TARGETS ===");
+        // console.log(`📍 Target Aisle: ${targetAisle + 1}`);
+        // console.log(`📍 Aisle Center X: ${aisleCenterX.toFixed(2)}`);
+        // console.log(`📍 Expected Lift Position: X=${aisleCenterX.toFixed(2)}, Z=0.5`);
+        // console.log(`📍 Expected Shuttle Position: X=${aisleCenterX.toFixed(2)}, Z=5.0`);
         
-        console.log("🔍 === ALIGNMENT VERIFICATION ===");
+        // console.log("🔍 === ALIGNMENT VERIFICATION ===");
         // Check if container targets match equipment positions
         const expectedLiftX = targetAisle * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
         const alignmentCheck = Math.abs(aisleCenterX - expectedLiftX) < 0.1;
-        console.log(`✅ Container X alignment with equipment: ${alignmentCheck ? 'ALIGNED' : 'MISALIGNED'}`);
-        console.log(`📏 Container X: ${aisleCenterX.toFixed(2)} vs Equipment X: ${expectedLiftX.toFixed(2)}`);
+        // console.log(`✅ Container X alignment with equipment: ${alignmentCheck ? 'ALIGNED' : 'MISALIGNED'}`);
+        // console.log(`📏 Container X: ${aisleCenterX.toFixed(2)} vs Equipment X: ${expectedLiftX.toFixed(2)}`);
     }
 
     executeAnimationSequence(uiConfig, dimensions) {
@@ -509,52 +499,39 @@ export class AnimationManager {
             z: targetModuleZ // Final storage position
         };
 
-        console.log("🎬 === CONTAINER ANIMATION SEQUENCE ===");
-        console.log(`📦 STEP 1 - To Conveyor: X=${step1.x.toFixed(2)}, Y=${step1.y.toFixed(2)}, Z=${step1.z.toFixed(2)}`);
-        console.log(`� STEP 2 - To Aisle: X=${step2.x.toFixed(2)}, Y=${step2.y.toFixed(2)}, Z=${step2.z.toFixed(2)}`);
-        console.log(`📦 STEP 3 - To Lift: X=${step3.x.toFixed(2)}, Y=${step3.y.toFixed(2)}, Z=${step3.z.toFixed(2)}`);
-        console.log(`� STEP 4 - Lift Up: X=${step4.x.toFixed(2)}, Y=${step4.y.toFixed(2)}, Z=${step4.z.toFixed(2)}`);
-        console.log(`� STEP 5 - To Shuttle: X=${step5.x.toFixed(2)}, Y=${step5.y.toFixed(2)}, Z=${step5.z.toFixed(2)}`);
-        console.log(`� STEP 6 - Along Aisle: X=${step6.x.toFixed(2)}, Y=${step6.y.toFixed(2)}, Z=${step6.z.toFixed(2)}`);
-        console.log(`📦 STEP 7 - To Storage: X=${step7.x.toFixed(2)}, Y=${step7.y.toFixed(2)}, Z=${step7.z.toFixed(2)}`);
+        // Debug: Container animation sequence
+        // console.log("🎬 === CONTAINER ANIMATION SEQUENCE ===");
+        // ...existing code for debug logs...
 
         // Create tweens with minimal logging
         const tween1 = new this.tweenJs.Tween(this.animationContainer.position)
             .to(step1, 2000)
-            .easing(this.tweenJs.Easing.Quadratic.InOut)
-            .onComplete(() => console.log("✅ STEP 1: At conveyor"));
+            .easing(this.tweenJs.Easing.Quadratic.InOut);
 
         const tween2 = new this.tweenJs.Tween(this.animationContainer.position)
             .to(step2, 2500)
-            .easing(this.tweenJs.Easing.Quadratic.InOut)
-            .onComplete(() => console.log("✅ STEP 2: At aisle conveyor"));
+            .easing(this.tweenJs.Easing.Quadratic.InOut);
 
         const tween3 = new this.tweenJs.Tween(this.animationContainer.position)
             .to(step3, 1800)
-            .easing(this.tweenJs.Easing.Quadratic.InOut)
-            .onComplete(() => console.log("✅ STEP 3: At lift"));
+            .easing(this.tweenJs.Easing.Quadratic.InOut);
 
         const tween4 = new this.tweenJs.Tween(this.animationContainer.position)
             .to(step4, 2200)
-            .easing(this.tweenJs.Easing.Sinusoidal.InOut)
-            .onComplete(() => console.log("✅ STEP 4: Lifted up"));
+            .easing(this.tweenJs.Easing.Sinusoidal.InOut);
 
         const tween5 = new this.tweenJs.Tween(this.animationContainer.position)
             .to(step5, 1500)
-            .easing(this.tweenJs.Easing.Quadratic.InOut)
-            .onComplete(() => console.log("✅ STEP 5: On shuttle"));
+            .easing(this.tweenJs.Easing.Quadratic.InOut);
 
         const tween6 = new this.tweenJs.Tween(this.animationContainer.position)
             .to(step6, 3200)
-            .easing(this.tweenJs.Easing.Quadratic.InOut)
-            .onComplete(() => console.log("✅ STEP 6: At target module"));
+            .easing(this.tweenJs.Easing.Quadratic.InOut);
 
         const tween7 = new this.tweenJs.Tween(this.animationContainer.position)
             .to(step7, 1500)
             .easing(this.tweenJs.Easing.Quadratic.Out)
             .onComplete(() => {
-                console.log("✅ STEP 7: STORED!");
-                console.log("🎉 === ANIMATION COMPLETED ===");
                 this.isAnimating = false;
             });
 
@@ -599,7 +576,7 @@ export class AnimationManager {
         }
 
         this.isAnimating = false;
-        console.log("Animation stopped!");
+        // console.log("Animation stopped!");
         // Store start position for reset on stop
         this.lastStartPos = positions.startPos;
     }
@@ -612,7 +589,7 @@ export class AnimationManager {
 
     // Create animated shuttles and lifts for the warehouse
     createAnimatedEquipment(uiConfig) {
-        console.log("🤖 Creating animated shuttles and lifts...");
+        // console.log("🤖 Creating animated shuttles and lifts...");
         
         // Clear existing equipment
         this.shuttles.clear();
@@ -641,7 +618,7 @@ export class AnimationManager {
         this.scene.add(this.shuttleGroup);
         this.scene.add(this.liftGroup);
         
-        console.log(`🤖 Created ${this.shuttles.size} shuttles and ${this.lifts.size} lifts`);
+        // console.log(`🤖 Created ${this.shuttles.size} shuttles and ${this.lifts.size} lifts`);
     }
 
     createShuttles(uiConfig, warehouseOffset) {
@@ -688,7 +665,7 @@ export class AnimationManager {
                 this.shuttleGroup.add(shuttle);
                 this.shuttles.set(shuttleId, shuttle);
                 
-                console.log(`🚛 Created shuttle ${shuttleId} at level ${l + 1} (Y=${levelY.toFixed(2)}) position:`, shuttle.position);
+                // console.log(`🚛 Created shuttle ${shuttleId} at level ${l + 1} (Y=${levelY.toFixed(2)}) position:`, shuttle.position);
             }
         }
     }
@@ -733,7 +710,7 @@ export class AnimationManager {
             this.liftGroup.add(lift);
             this.lifts.set(liftId, lift);
             
-            console.log(`🏗️ Created lift ${liftId} at PREZONE position (Z=0.5):`, lift.position);
+            // console.log(`🏗️ Created lift ${liftId} at PREZONE position (Z=0.5):`, lift.position);
         }
     }
 
@@ -800,7 +777,7 @@ export class AnimationManager {
                             .onComplete(() => {
                                 // Restore original status
                                 shuttleObject.userData.status = originalStatus;
-                                console.log(`🦾 Shuttle arm animation complete: ${action}`);
+                                // console.log(`🦾 Shuttle arm animation complete: ${action}`);
                                 resolve();
                             });
                         retractTween.start();
@@ -808,7 +785,7 @@ export class AnimationManager {
                 });
 
             extendTween.start();
-            console.log(`🦾 Animating shuttle arms: ${action}`);
+            // console.log(`🦾 Animating shuttle arms: ${action}`);
         });
     }
 }

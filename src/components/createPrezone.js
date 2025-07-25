@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
 export function createPrezone(uiConfig, constants) {
-    console.log('🏭 Creating prezone with picking station and multi-lift conveyor system...');
     
     const prezoneGroup = new THREE.Group();
     prezoneGroup.name = 'PrezoneGroup';
@@ -10,13 +9,11 @@ export function createPrezone(uiConfig, constants) {
     createPickingStation(prezoneGroup, uiConfig);
     createMultiLiftConveyorSystem(prezoneGroup, uiConfig, constants);
     
-    console.log('✅ Prezone created with connections to all lifts');
     
     return prezoneGroup;
 }
 
 function createPickingStation(parent, uiConfig) {
-    console.log(`📦 Creating ${uiConfig.picking_stations} picking stations...`);
     
     // Calculate station layout using same logic as AnimationManager
     const stationWidth = 2.5;
@@ -50,12 +47,10 @@ function createPickingStation(parent, uiConfig) {
         
         parent.add(platform);
         
-        console.log(`✅ Picking station ${i} created at relative position (${pickingX.toFixed(2)}, ${pickingY}, ${pickingZ})`);
     }
 }
 
 function createMultiLiftConveyorSystem(parent, uiConfig, constants) {
-    console.log('🛤️ Creating dual-level conveyor system (SOURCE above + TARGET below) for all lifts...');
     
     // Calculate lift positions based on AnimationManager logic
     const rackAndAisleWidth = (uiConfig.storage_depth * 0.8 * 2) + 2.5;
@@ -191,7 +186,6 @@ function createMultiLiftConveyorSystem(parent, uiConfig, constants) {
         createSupportPillars(parent, liftX, distributionZ, liftFinalZ, targetLevel, sourceLevel);
     }
     
-    console.log(`✅ Dual-level conveyor system created for ${uiConfig.picking_stations} stations and ${uiConfig.aisles} lifts with upper/lower levels`);
 }
 
 function createSupportPillars(parent, liftX, startZ, endZ, lowerLevel, upperLevel) {
@@ -206,8 +200,8 @@ function createSupportPillars(parent, liftX, startZ, endZ, lowerLevel, upperLeve
             const pillarGeometry = new THREE.CylinderGeometry(0.05, 0.05, pillarHeight);
             const pillarMaterial = new THREE.MeshLambertMaterial({ 
                 color: 0x666666, // Dark grey
-                metalness: 0.7,
-                roughness: 0.3
+                // metalness: 0.7,
+                // roughness: 0.3
             });
             
             const pillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
@@ -274,8 +268,8 @@ function createConveyorSegment(parent, startPoint, endPoint, segmentName, flowTy
         color: color,
         transparent: true,
         opacity: opacity,
-        metalness: 0.3,
-        roughness: 0.7
+        // metalness: 0.3,
+        // roughness: 0.7
     });
     
     const conveyor = new THREE.Mesh(conveyorGeometry, conveyorMaterial);
@@ -292,5 +286,4 @@ function createConveyorSegment(parent, startPoint, endPoint, segmentName, flowTy
     
     parent.add(conveyor);
     
-    console.log(`✅ ${flowType.toUpperCase()} conveyor "${segmentName}" created: ${startPoint.name} → ${endPoint.name}`);
 }

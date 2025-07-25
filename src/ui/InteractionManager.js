@@ -31,32 +31,13 @@ export class InteractionManager {
     }
 
     createCameraPresets() {
+        // Camera presets will be calculated dynamically based on current warehouse config
         this.cameraPresets = {
-            overview: {
-                position: new THREE.Vector3(25, 20, 25),
-                target: new THREE.Vector3(0, 0, 0),
-                name: "Overview"
-            },
-            topView: {
-                position: new THREE.Vector3(0, 50, 0),
-                target: new THREE.Vector3(0, 0, 0),
-                name: "Top View"
-            },
-            sideView: {
-                position: new THREE.Vector3(40, 10, 0),
-                target: new THREE.Vector3(0, 0, 0),
-                name: "Side View"
-            },
-            prezoneView: {
-                position: new THREE.Vector3(0, 12, -25),
-                target: new THREE.Vector3(0, 0, -8),
-                name: "Prezone View"
-            },
-            aisleView: {
-                position: new THREE.Vector3(5, 8, 15),
-                target: new THREE.Vector3(5, 0, 10),
-                name: "Aisle View"
-            }
+            overview: { name: "Overview" },
+            topView: { name: "Top View" },
+            sideView: { name: "Side View" },
+            prezoneView: { name: "Prezone View" },
+            aisleView: { name: "Aisle View" }
         };
     }
 
@@ -558,9 +539,43 @@ export class InteractionManager {
     }
 
     setCameraPreset(presetName) {
-        const preset = this.cameraPresets[presetName];
-        if (!preset) return;
-        this.animateCamera(preset.position, preset.target);
+        // Calculate warehouse dimensions based on current config
+        const cfg = this.uiManager.getConfig ? this.uiManager.getConfig() : this.uiManager.uiConfig;
+        const totalRackDepth = cfg.storage_depth * 1.5; // locationDepth from constants
+        const rackAndAisleWidth = (totalRackDepth * 2) + 3; // aisleWidth from constants
+        const warehouseWidth = cfg.aisles * rackAndAisleWidth;
+        const warehouseLength = cfg.modules_per_aisle * 2; // moduleLength from constants
+        const centerX = warehouseWidth / 2;
+        const centerZ = warehouseLength / 2;
+
+        let position, target;
+        switch (presetName) {
+            case 'overview':
+                position = new THREE.Vector3(centerX + 15, 15, centerZ + 20);
+                target = new THREE.Vector3(centerX, 0, centerZ);
+                break;
+            case 'topView':
+                position = new THREE.Vector3(centerX, 50, centerZ);
+                target = new THREE.Vector3(centerX, 0, centerZ);
+                break;
+            case 'sideView':
+                position = new THREE.Vector3(warehouseWidth + 15, 10, centerZ);
+                target = new THREE.Vector3(centerX, 0, centerZ);
+                break;
+            case 'prezoneView':
+                position = new THREE.Vector3(centerX, 12, -25);
+                target = new THREE.Vector3(centerX, 0, -8);
+                break;
+            case 'aisleView':
+                position = new THREE.Vector3(rackAndAisleWidth / 2, 8, centerZ + 10);
+                target = new THREE.Vector3(rackAndAisleWidth / 2, 0, centerZ);
+                break;
+            default:
+                // fallback to overview
+                position = new THREE.Vector3(centerX + 15, 15, centerZ + 20);
+                target = new THREE.Vector3(centerX, 0, centerZ);
+        }
+        this.animateCamera(position, target);
     }
 
     animateCamera(targetPosition, targetLookAt, duration = 1000) {
