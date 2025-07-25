@@ -25,33 +25,33 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
     // Helper function to get location type
     const getLocationType = (aisle, level, module, depth, position) => {
         if (!locationTypes) return 'Storage';
-        
+
         // Check if location matches any buffer location definition
-        const isBuffer = locationTypes.buffer_locations.some(buffer => {
+        const bufferMatch = locationTypes.buffer_locations.find(buffer => {
             const aisleMatch = Array.isArray(buffer.aisle) ? 
                 buffer.aisle.includes(aisle) : 
                 (buffer.aisle === null || buffer.aisle === aisle);
-            
+
             const levelMatch = Array.isArray(buffer.level) ? 
                 buffer.level.includes(level) : 
                 (buffer.level === null || buffer.level === level);
-            
+
             const moduleMatch = Array.isArray(buffer.module) ? 
                 buffer.module.includes(module) : 
                 (buffer.module === null || buffer.module === module);
-            
+
             const depthMatch = Array.isArray(buffer.depth) ? 
                 buffer.depth.includes(depth) : 
                 (buffer.depth === null || buffer.depth === depth);
-            
+
             const positionMatch = Array.isArray(buffer.position) ? 
                 buffer.position.includes(position) : 
                 (buffer.position === null || buffer.position === position);
-            
+
             return aisleMatch && levelMatch && moduleMatch && depthMatch && positionMatch;
         });
-        
-        return isBuffer ? 'Buffer' : locationTypes.default_type;
+
+        return bufferMatch ? (bufferMatch.type || 'Buffer') : locationTypes.default_type;
     };
 
     const moduleLength = uiConfig.locations_per_module * constants.locationLength;
@@ -185,16 +185,22 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
 
                             // Get location type to determine material
                             const locationType = getLocationType(a, l, m, d, s);
-                            
-                            // Create different materials based on location type
+
+                            // Color map for custom types
+                            const typeColorMap = {
+                                'Buffer': 0xff8500, // Bright orange
+                                'Sakis': 0x00bfff,  // DeepSkyBlue
+                                'Nothing': 0x888888 // Grey
+                                // Add more custom types/colors as needed
+                            };
+
                             let locationMaterial;
-                            if (locationType === 'Buffer') {
-                                // Buffer locations - bright orange/yellow for easy identification
+                            if (typeColorMap[locationType]) {
                                 locationMaterial = new THREE.MeshStandardMaterial({
-                                    color: 0xff8500, // Bright orange for buffer locations
+                                    color: typeColorMap[locationType],
                                     metalness: 0.4,
                                     roughness: 0.5,
-                                    emissive: 0x331a00, // Slight orange glow
+                                    emissive: 0x331a00,
                                     emissiveIntensity: 0.1
                                 });
                             } else {
@@ -205,7 +211,7 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                                     roughness: 0.7
                                 });
                             }
-                            
+
                             const locationGeometry = new THREE.BoxGeometry(
                                 constants.locationDepth * 0.8, 
                                 constants.levelHeight * 0.8, 

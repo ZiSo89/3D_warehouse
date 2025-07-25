@@ -1,0 +1,138 @@
+#interaction-panel {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 280px;
+    background: rgba(30, 50, 49, 0.95);
+    color: #f1faee;
+    border: 2px solid #6e9075;
+    border-radius: 10px;
+    padding: 15px 15px 15px 15px;
+    font-family: Arial, sans-serif;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    z-index: 1000;
+    max-height: 80vh;
+    overflow-y: auto;
+    transition: left 0.3s, bottom 0.3s, width 0.3s, height 0.3s;
+}
+#interaction-toggle {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #6e9075;
+    color: #f1faee;
+    border: none;
+    border-radius: 4px;
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    z-index: 1100;
+    transition: background 0.3s;
+}
+#interaction-toggle:hover {
+    background: #93032e;
+}
+#interaction-panel.collapsed {
+    width: 48px;
+    min-width: 0;
+    max-width: 48px;
+    height: 48px;
+    padding: 0;
+    overflow: hidden;
+}
+#interaction-panel.collapsed .interaction-header,
+#interaction-panel.collapsed .camera-buttons,
+#interaction-panel.collapsed .object-info {
+    display: none !important;
+}
+#interaction-panel.collapsed #interaction-toggle {
+    right: 6px;
+    top: 6px;
+}
+@media (max-width: 600px) {
+    #interaction-panel {
+        left: 0;
+        right: 0;
+        top: auto;
+        bottom: 0;
+        width: 100vw;
+        max-width: 100vw;
+        border-radius: 10px 10px 0 0;
+        padding: 10px 5px 5px 5px;
+    }
+    #interaction-toggle {
+        right: 10px;
+        top: 10px;
+    }
+}
+/* ...existing styles for .interaction-header, .camera-buttons, .camera-btn, etc... */
+.interaction-header h3 {
+    margin: 0 0 15px 0;
+    color: #f1faee;
+    text-align: center;
+    font-size: 16px;
+    border-bottom: 1px solid #6e9075;
+    padding-bottom: 8px;
+}
+.camera-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+.camera-btn {
+    padding: 8px 6px;
+    background: #6e9075;
+    color: #f1faee;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.camera-btn:hover {
+    background: #93032e;
+}
+.object-info {
+    background: rgba(147, 3, 46, 0.1);
+    border: 1px solid #93032e;
+    border-radius: 5px;
+    padding: 12px;
+    margin-top: 10px;
+}
+.object-info h4 {
+    margin: 0 0 10px 0;
+    color: #93032e;
+    font-size: 14px;
+    border-bottom: 1px solid #93032e;
+    padding-bottom: 5px;
+}
+.object-info h3 {
+    margin: 0 0 10px 0;
+    color: #93032e;
+    font-size: 16px;
+    text-align: center;
+}
+.object-details-content {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #f1faee;
+}
+.object-details-content strong {
+    color: #e5d1d0;
+}
+#interaction-panel::-webkit-scrollbar {
+    width: 6px;
+}
+#interaction-panel::-webkit-scrollbar-track {
+    background: rgba(110, 144, 117, 0.2);
+    border-radius: 3px;
+}
+#interaction-panel::-webkit-scrollbar-thumb {
+    background: #6e9075;
+    border-radius: 3px;
+}
+#interaction-panel::-webkit-scrollbar-thumb:hover {
+    background: #93032e;
+}

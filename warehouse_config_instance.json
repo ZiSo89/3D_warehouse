@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "name": "OSR1 Warehouse Configuration",
+    "created": "2025-07-25T16:45:10.000Z",
+    "version": "1.0.0",
+    "description": "Configuration based on wh_model_cfg_osr1_example.py for project AT00000"
+  },
+  "warehouse_parameters": {
+    "aisles": 2,
+    "levels_per_aisle": [
+      10,
+      10
+    ],
+    "modules_per_aisle": 6,
+    "locations_per_module": 4,
+    "storage_depth": 2,
+    "picking_stations": 3
+  },
+  "missing_locations": [],
+  "location_types": {
+    "buffer_locations": [
+      {
+        "aisle": null,
+        "level": null,
+        "module": 0,
+        "depth": null,
+        "position": null,
+        "type": "Buffer"
+      }
+    ],
+    "flowrack_levels": [1, 2, 3, 4],
+    "default_type": "Storage"
+  },
+  "calculated_metrics": {
+    "total_locations": 480,
+    "total_modules": 7,
+    "total_levels": 20
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "metadata": {
+    "name": "warehouse_config",
+    "created": "2025-07-25T14:42:00.000Z",
+    "version": "1.0.0",
+    "description": "Configuration based on wh_model_cfg.py for project AT00000 OSR1"
+  },
+  "warehouse_parameters": {
+    "aisles": 3,
+    "levels_per_aisle": [
+      10,
+      10,
+      12
+    ],
+    "modules_per_aisle": 6,
+    "locations_per_module": 4,
+    "storage_depth": 3,
+    "picking_stations": 4
+  },
+  "missing_locations": [
+    {
+      "aisle": 1,
+      "level": null,
+      "module": 7,
+      "depth": null,
+      "position": null
+    },
+    {
+      "aisle": [
+        1,
+        2
+      ],
+      "level": [
+        4,
+        9
+      ],
+      "module": 3,
+      "depth": null,
+      "position": 1
+    },
+    {
+      "aisle": 3,
+      "level": [
+        4,
+        10
+      ],
+      "module": 3,
+      "depth": null,
+      "position": 1
+    }
+  ],
+  "location_types": {
+    "buffer_locations": [
+      {
+        "aisle": null,
+        "level": null,
+        "module": 0,
+        "depth": null,
+        "position": null,
+        "type": "Buffer"
+      }
+    ],
+    "default_type": "Storage"
+  },
+  "calculated_metrics": {
+    "total_locations": 710,
+    "total_modules": 7,
+    "total_levels": 32
+  }
+}
