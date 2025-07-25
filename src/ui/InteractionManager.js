@@ -68,7 +68,7 @@ export class InteractionManager {
         const interactionPanel = document.createElement('div');
         interactionPanel.id = 'interaction-panel';
         interactionPanel.innerHTML = `
-            <button id="interaction-toggle" aria-label="Hide Panel" title="Hide Controls">☰</button>
+            <button id="interaction-toggle" aria-label="Hide Panel" title="Hide Controls" style="position:absolute;top:8px;right:8px;background:#b7b7a4;color:#3d3d2d;border:none;border-radius:4px;font-size:20px;width:36px;height:36px;cursor:pointer;z-index:2000;transition:background 0.3s;display:block;visibility:visible;">☰</button>
             <div class="interaction-header">
                 <h3>Ρυθμίσεις & Ενέργειες</h3>
             </div>

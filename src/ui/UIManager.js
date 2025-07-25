@@ -33,6 +33,7 @@ export class UIManager {
         const uiContainer = document.createElement('div');
         uiContainer.id = 'ui-panel';
         uiContainer.innerHTML = `
+            <button id="ui-toggle" aria-label="Hide Info Panel" title="Hide Info Panel" style="position:absolute;top:8px;right:8px;background:#b7b7a4;color:#3d3d2d;border:none;border-radius:4px;font-size:20px;width:36px;height:36px;cursor:pointer;z-index:2000;transition:background 0.3s;display:block;visibility:visible;">☰</button>
             <div class="ui-header">
                 <h2>Warehouse Info</h2>
             </div>
@@ -55,11 +56,57 @@ export class UIManager {
         document.body.appendChild(uiContainer);
         this.addStyles();
         this.updateStorageCapacity();
+        // Toggle logic for info panel
+        const toggleBtn = uiContainer.querySelector('#ui-toggle');
+        const uiContent = uiContainer.querySelector('#ui-content');
+        toggleBtn.addEventListener('click', () => {
+            const isCollapsed = uiContainer.classList.toggle('collapsed');
+            toggleBtn.setAttribute('aria-label', isCollapsed ? 'Show Info Panel' : 'Hide Info Panel');
+            toggleBtn.setAttribute('title', isCollapsed ? 'Show Info Panel' : 'Hide Info Panel');
+            toggleBtn.textContent = '☰';
+            if (isCollapsed) {
+                uiContent.style.display = 'none';
+            } else {
+                uiContent.style.display = '';
+            }
+        });
     }
 
     addStyles() {
         const style = document.createElement('style');
         style.textContent = `
+            #ui-toggle {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: #b7b7a4;
+                color: #3d3d2d;
+                border: none;
+                border-radius: 4px;
+                font-size: 20px;
+                width: 36px;
+                height: 36px;
+                cursor: pointer;
+                z-index: 2000;
+                transition: background 0.3s;
+                display: block;
+                visibility: visible;
+            }
+            #ui-toggle:hover {
+                background: #bc6c25;
+            }
+            #ui-panel.collapsed {
+                width: 48px !important;
+                min-width: 0 !important;
+                max-width: 48px !important;
+                height: 48px !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+            #ui-panel.collapsed .ui-header,
+            #ui-panel.collapsed .ui-content {
+                display: none !important;
+            }
             #ui-panel {
                 position: fixed;
                 top: 20px;
@@ -100,13 +147,13 @@ export class UIManager {
                 overflow-x: hidden;
                 flex-grow: 1;
                 scrollbar-width: thin;
-                scrollbar-color: #6e9075 #e5d1d0;
+                scrollbar-color: #6e9075 #e0e4e2;
             }
             .ui-content::-webkit-scrollbar {
                 width: 8px;
             }
             .ui-content::-webkit-scrollbar-track {
-                background: #e5d1d0;
+                background: #e0e4e2;
                 border-radius: 4px;
             }
             .ui-content::-webkit-scrollbar-thumb {
@@ -121,23 +168,110 @@ export class UIManager {
                 padding: 12px;
                 border: 1px solid #6e9075;
                 border-radius: 6px;
-                background: #e5d1d0;
+                background: #e0e4e2;
             }
             .ui-section h4 {
                 margin: 0 0 10px 0;
-                color: #1e3231;
+                color: #3d3d4c;
+            }
+            .ui-label {
+                display: block;
+                background: #f8f8f3; /* OC-108 */
+                color: #3d5a6c; /* AF-565 text */
+                font-weight: bold;
+                border-radius: 4px;
+                padding: 3px 8px;
+                margin-bottom: 6px;
+                font-size: 13px;
+                text-align: left;
+            }
+            .ui-slider-label {
+                color: #3d5a6c;
+                font-weight: bold;
+                font-size: 13px;
+                margin-bottom: 2px;
+                display: block;
+            }
+            .ui-slider-value {
+                color: #3d5a6c;
+                font-weight: bold;
+                font-size: 15px;
+                margin-left: 8px;
+                display: inline-block;
+                min-width: 24px;
+                text-align: center;
+                vertical-align: middle;
+            }
+            input[type="range"] {
+                width: 70%;
+                accent-color: #bcb6c6; /* 2114-60 muted lavender */
+                background: #f8f8f3;
+                border-radius: 4px;
+                height: 6px;
+                margin: 0 8px 0 0;
+                border: 1px solid #bfcad6;
+                box-shadow: none;
+            }
+            input[type="range"]::-webkit-slider-thumb {
+                background: #bcb6c6;
+                border-radius: 50%;
+                width: 18px;
+                height: 18px;
+                border: 2px solid #3d5a6c;
+                box-shadow: 0 1px 4px rgba(61,90,108,0.12);
+            }
+            input[type="range"]::-moz-range-thumb {
+                background: #bcb6c6;
+                border-radius: 50%;
+                border: 2px solid #3d5a6c;
+                width: 18px;
+                height: 18px;
+                box-shadow: 0 1px 4px rgba(61,90,108,0.12);
+            }
+            input[type="range"]::-ms-thumb {
+                background: #bcb6c6;
+                border-radius: 50%;
+                border: 2px solid #3d5a6c;
+                width: 18px;
+                height: 18px;
+                box-shadow: 0 1px 4px rgba(61,90,108,0.12);
+            }
+            input[type="range"]:focus {
+                outline: none;
+                box-shadow: 0 0 0 2px #bcb6c6;
+            }
+            input[type="range"]::-webkit-slider-runnable-track {
+                background: #e0e4e2;
+                height: 6px;
+                border-radius: 4px;
+                border: 1px solid #bfcad6;
+            }
+            input[type="range"]::-ms-fill-lower {
+                background: #e0e4e2;
+            }
+            input[type="range"]::-ms-fill-upper {
+                background: #e0e4e2;
+            }
+            input[type="range"]::-moz-range-track {
+                background: #e0e4e2;
+                height: 6px;
+                border-radius: 4px;
+                border: 1px solid #bfcad6;
+            }
+            input[type="range"]:disabled {
+                background: #dbe3e6;
             }
             .capacity-section {
                 background: #f1faee;
                 padding: 15px;
                 border-radius: 8px;
-                border: 2px solid #93032e;
+                border: 2px solid #2d6a4f;
             }
             .capacity-display {
                 font-size: 24px;
                 font-weight: bold;
                 text-align: center;
-                color: #93032e;
+                color: #2d6a4f;
                 margin: 10px 0;
             }
         `;

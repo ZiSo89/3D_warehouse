@@ -31,7 +31,7 @@ export class SceneManager {
             // Buffer locations near lifts - these are special locations used for lift operations
             buffer_locations: [
                 // Buffer zone in aisle 0, all levels, first and last modules
-                { aisle: 0, level: null, module: [0, 0], depth: [0, 1], position: null, type: 'Buffer' }
+                { aisle: null, level: null, module: [0, 0], depth: [0, 1], position: null, type: 'Buffer' }
             ],
             // All other locations are Storage by default
             default_type: 'Storage'
