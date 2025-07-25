@@ -8,7 +8,23 @@ export class UIManager {
         if (logPanel) {
             const entry = document.createElement('div');
             entry.className = 'info-log-entry';
-            entry.innerHTML = message;
+            // Compact object details for mobile
+            if (window.innerWidth <= 600 && /aisle:|level:|module:|depth:|position:/i.test(message)) {
+                // Extract all key: value pairs
+                const regex = /<strong>(aisle|level|module|depth|position):<\/strong>\s*([\d]+)/gi;
+                let compact = [];
+                let m;
+                while ((m = regex.exec(message)) !== null) {
+                    compact.push(`${m[1]}: ${m[2]}`);
+                }
+                if (compact.length) {
+                    entry.innerHTML = compact.join(' | ');
+                } else {
+                    entry.innerHTML = message;
+                }
+            } else {
+                entry.innerHTML = message;
+            }
             logPanel.appendChild(entry);
             logPanel.scrollTop = logPanel.scrollHeight;
         }
