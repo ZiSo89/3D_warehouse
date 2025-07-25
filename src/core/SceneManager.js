@@ -15,28 +15,17 @@ export class SceneManager {
         this.warehouseGroup = new THREE.Group();
         this.animationManager = new AnimationManager(this);
         this.scene.add(this.warehouseGroup);
-        // (Renderer DOM element will be appended elsewhere)
-        // Define missing locations (like in WH_MODEL.txt)
         this.missingLocations = [
-            // Example: Missing location due to building column in aisle 1, level 2, module 3, depth 0, position 1
             { aisle: 1, level: 2, module: 3, depth: 0, position: 1 },
-            // Example: Multiple aisles affected - service levels have missing locations
             { aisle: [0, 1], level: [3, 4], module: 2, depth: null, position: 0 },
-            // Example: Missing entire module due to lift shaft
             { aisle: 2, level: null, module: 7, depth: null, position: null }
         ];
-        // Define location types (like in WH_MODEL.txt)
         this.locationTypes = {
-            // Buffer locations near lifts - these are special locations used for lift operations
             buffer_locations: [
-                // Buffer zone in aisle 0, all levels, first and last modules
                 { aisle: null, level: null, module: [0, 0], depth: [0, 1], position: null, type: 'Buffer' }
             ],
-            // All other locations are Storage by default
             default_type: 'Storage'
         };
-        console.log('[SceneManager] Constructor called');
-        // Set renderer size to fill the window
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
@@ -45,7 +34,6 @@ export class SceneManager {
      * Optionally animates the camera move.
      */
     fitToWarehouseView(animate) {
-        console.log('[SceneManager] fitToWarehouseView called');
         if (typeof animate === 'undefined') animate = true;
         if (!this.warehouseGroup || !this.camera) return;
 
@@ -55,7 +43,6 @@ export class SceneManager {
             this.controls.enableDamping = true;
             this.controls.dampingFactor = 0.05;
             this.controls.maxPolarAngle = Math.PI / 2 - 0.1;
-            console.log('[SceneManager] OrbitControls initialized:', this.controls);
         }
 
         // Compute bounding box of warehouse only
@@ -75,37 +62,20 @@ export class SceneManager {
             this.controls.target.copy(center);
             this.controls.update();
         }
-        // Log camera and warehouse positions for debugging
-        console.log('[Camera Debug] Camera Position:', this.camera.position);
-        console.log('[Camera Debug] Camera LookAt:', center);
-        console.log('[Warehouse Debug] warehouseGroup Position:', this.warehouseGroup.position);
 
-        // Check if prezone is present in warehouseGroup
-        let hasPrezone = false;
-        this.warehouseGroup.children.forEach(child => {
-            if (child.name && child.name.toLowerCase().includes('prezone')) {
-                hasPrezone = true;
-            }
-        });
 
-        console.log('[SceneManager] Camera:', this.camera);
-        console.log('[SceneManager] Renderer:', this.renderer);
-        console.log('[SceneManager] warehouseGroup:', this.warehouseGroup);
 
         this.scene.background = new THREE.Color(0xf1faee); // Light cream from palette
         this.scene.fog = new THREE.Fog(0xf1faee, 50, 100); // Matching fog color
 
         this.setupLighting();
-        console.log('[SceneManager] Lighting set up');
 
         window.addEventListener('resize', this.onWindowResize.bind(this), false);
 
         this.createOrientationLabels(); // Large labels at warehouse edges
         this.createCompass(); // 3D compass for orientation
-        console.log('[SceneManager] Orientation labels and compass created');
 
         this.animate();
-        console.log('[SceneManager] fitToWarehouseView finished');
     }
 
     createOrientationLabels() {
@@ -147,8 +117,6 @@ export class SceneManager {
     createCompass() {
         // Create compass group (separate from warehouseGroup so it does not affect bounding box/camera)
         this.compassGroup = new THREE.Group();
-
-        // Compass base (circle)
         const compassGeometry = new THREE.CylinderGeometry(3, 3, 0.2, 32);
         const compassMaterial = new THREE.MeshStandardMaterial({ 
             color: 0x2d3748, 
@@ -157,45 +125,27 @@ export class SceneManager {
         });
         const compassBase = new THREE.Mesh(compassGeometry, compassMaterial);
         this.compassGroup.add(compassBase);
-        console.log('[SceneManager] Orientation labels and compass created');
 
-        // Create directional arrows
         const arrowGeometry = new THREE.ConeGeometry(0.4, 1.5, 8);
-
-        // North arrow (red) - points to negative Z (back of warehouse)
         const northArrow = new THREE.Mesh(arrowGeometry, new THREE.MeshStandardMaterial({ color: 0xff4444 }));
         northArrow.position.set(0, 0.6, -2);
         northArrow.rotation.x = Math.PI;
         this.compassGroup.add(northArrow);
-
-        // South arrow (blue) - points to positive Z (lift area)
         const southArrow = new THREE.Mesh(arrowGeometry, new THREE.MeshStandardMaterial({ color: 0x4444ff }));
         southArrow.position.set(0, 0.6, 2);
         this.compassGroup.add(southArrow);
-
-        // East arrow (green) - points to positive X (right)
         const eastArrow = new THREE.Mesh(arrowGeometry, new THREE.MeshStandardMaterial({ color: 0x44ff44 }));
         eastArrow.position.set(2, 0.6, 0);
         eastArrow.rotation.z = -Math.PI / 2;
         this.compassGroup.add(eastArrow);
-
-        // West arrow (yellow) - points to negative X (left)
         const westArrow = new THREE.Mesh(arrowGeometry, new THREE.MeshStandardMaterial({ color: 0xffff44 }));
         westArrow.position.set(-2, 0.6, 0);
         westArrow.rotation.z = Math.PI / 2;
         this.compassGroup.add(westArrow);
-
-        // Add text labels
         this.addCompassLabels();
-
-        // Initial compass position (will be updated after warehouse is built)
         this.compassGroup.position.set(20, 2, 20);
         this.compassGroup.scale.setScalar(0.8);
-
-        // Add compassGroup directly to scene, NOT to warehouseGroup
         this.scene.add(this.compassGroup);
-        // Update compass position after warehouse is built
-        // (If warehouse is already built, this will place it correctly)
         this.updateCompassPosition();
     }
 
@@ -258,7 +208,6 @@ export class SceneManager {
     }
 
     animate() {
-        console.log('[SceneManager] animate called');
         requestAnimationFrame(this.animate.bind(this));
         this.controls.update();
         
@@ -331,21 +280,17 @@ export class SceneManager {
     }
 
     buildWarehouse(uiConfig) {
-        console.log('[SceneManager] buildWarehouse called', uiConfig);
         // Clear previous warehouse completely
         while (this.warehouseGroup.children.length > 0) {
             this.warehouseGroup.remove(this.warehouseGroup.children[0]);
         }
-        console.log('[SceneManager] warehouseGroup cleared:', this.warehouseGroup.children.length);
 
         const racks = createRacks(uiConfig, constants, this.missingLocations, this.locationTypes);
         this.warehouseGroup.add(racks);
-        console.log('[SceneManager] Racks added:', racks);
 
         const prezone = createPrezone(uiConfig, constants);
         prezone.position.z = - (uiConfig.storage_depth * constants.locationDepth) - 5;
         this.warehouseGroup.add(prezone);
-        console.log('[SceneManager] Prezone added:', prezone);
 
         // Center the warehouse (only X and Z, keep Y at ground level)
         // Only use warehouseGroup for bounding box, ignore compassGroup and other helpers
@@ -353,15 +298,12 @@ export class SceneManager {
         const center = box.getCenter(new THREE.Vector3());
         this.warehouseGroup.position.x = this.warehouseGroup.position.x - center.x;
         this.warehouseGroup.position.z = this.warehouseGroup.position.z - center.z;
-        console.log('[SceneManager] warehouseGroup position:', this.warehouseGroup.position);
 
         // Create animated equipment after warehouse is built
         this.animationManager.createAnimatedEquipment(uiConfig);
-        console.log('[SceneManager] Animated equipment created');
 
         // Update compass position after warehouse is rebuilt
         this.updateCompassPosition();
-        console.log('[SceneManager] buildWarehouse finished');
     }
 
     updateTheme(isDark) {
@@ -462,7 +404,6 @@ export class SceneManager {
             }
         };
 
-        // Create and download JSON file
         const jsonString = JSON.stringify(warehouseConfig, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -475,7 +416,6 @@ export class SceneManager {
         document.body.removeChild(downloadLink);
         URL.revokeObjectURL(url);
 
-        console.log("Configuration exported successfully");
         return warehouseConfig;
     }
 
@@ -498,7 +438,6 @@ export class SceneManager {
                     default_type: 'Storage'
                 };
 
-                console.log("Configuration imported successfully");
                 
                 // Call the callback with the imported configuration
                 if (callback) {

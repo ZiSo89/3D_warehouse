@@ -471,8 +471,8 @@ export class InteractionManager {
                     }
                     label = `Selected: shuttle${details}`;
                 } else {
-                    // Exclude unwanted keys and increment indices for display
-                    const excludeKeys = ['id', 'coordinates', 'time'];
+                    // Exclude unwanted keys and increment indices for display, and omit 'type' from details
+                    const excludeKeys = ['id', 'coordinates', 'time', 'type'];
                     const details = Object.entries(object.userData)
                         .filter(([k, v]) => !excludeKeys.includes(k))
                         .map(([k, v]) => {
@@ -482,7 +482,7 @@ export class InteractionManager {
                             return `<div style='margin-left:10px;'><strong>${k}:</strong> ${v}</div>`;
                         })
                         .join('');
-                    label = `Selected: <strong>${object.userData.type || object.name || 'Object'}</strong>${details}`;
+                    label = `Selected: <strong>${object.userData.name || object.name || 'free storage'}</strong>${details}`;
                 }
             } else if (object.name) {
                 label = `Selected: <strong>${object.name}</strong>`;

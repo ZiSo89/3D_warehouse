@@ -221,24 +221,37 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                             locationBox.castShadow = true;
                             locationBox.receiveShadow = true;
 
+
+                            // For right (East, i === 1), depth increases left to right (depth = d + 1)
+                            // For left (West, i === 0), depth increases from right to left (depth = storage_depth - d)
+
+                            let displayDepth, dIndex;
+                            if (isEast) {
+                                dIndex = d;
+                                displayDepth = d;
+                            } else {
+                                dIndex = uiConfig.storage_depth - 1 - d;
+                                displayDepth = d;
+                            }
+
                             // Store location metadata for future reference (like click interactions)
                             locationBox.userData = {
                                 aisle: a,
                                 level: l,
                                 module: m,
-                                depth: d,
+                                depth: displayDepth,
                                 position: s,
                                 type: locationType,
-                                id: `${a}-${l}-${m}-${d}-${s}`,
+                                id: `${a}-${l}-${m}-${displayDepth}-${s}`,
                                 coordinates: {
-                                    x: (d * constants.locationDepth) + (constants.locationDepth / 2),
+                                    x: (dIndex * constants.locationDepth) + (constants.locationDepth / 2),
                                     y: (l * constants.levelHeight) + (constants.levelHeight / 2),
                                     z: (s * constants.locationLength) + (constants.locationLength / 2)
                                 }
                             };
 
                             locationBox.position.set(
-                                (d * constants.locationDepth) + (constants.locationDepth / 2),
+                                (dIndex * constants.locationDepth) + (constants.locationDepth / 2),
                                 (l * constants.levelHeight) + (constants.levelHeight / 2),
                                 (s * constants.locationLength) + (constants.locationLength / 2)
                             );
