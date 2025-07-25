@@ -1,3 +1,4 @@
+
 import * as THREE from 'three';
 
 export class InteractionManager {
@@ -61,29 +62,39 @@ export class InteractionManager {
     }
 
     createInteractionUI() {
+        // Prevent duplicate panel creation
+        if (document.getElementById('interaction-panel')) {
+            return;
+        }
         const interactionPanel = document.createElement('div');
         interactionPanel.id = 'interaction-panel';
         interactionPanel.innerHTML = `
+            <button id="interaction-toggle" aria-label="Hide Panel" title="Hide Controls">☰</button>
             <div class="interaction-header">
                 <h3>Camera Views</h3>
             </div>
-            
             <div class="camera-buttons">
                 <button class="camera-btn" data-preset="overview">📊 Overview</button>
                 <button class="camera-btn" data-preset="topView">⬆️ Top View</button>
                 <button class="camera-btn" data-preset="sideView">↔️ Side View</button>
                 <button class="camera-btn" data-preset="prezoneView">📦 Prezone</button>
             </div>
-
             <div class="object-info" id="object-info" style="display: none;">
                 <h4>Selected Object:</h4>
                 <div id="object-details"></div>
             </div>
         `;
-        
         document.body.appendChild(interactionPanel);
         this.addInteractionStyles();
         this.bindCameraEvents();
+        // Toggle logic (single instance)
+        const toggleBtn = interactionPanel.querySelector('#interaction-toggle');
+        toggleBtn.addEventListener('click', () => {
+            const isCollapsed = interactionPanel.classList.toggle('collapsed');
+            toggleBtn.setAttribute('aria-label', isCollapsed ? 'Show Panel' : 'Hide Panel');
+            toggleBtn.setAttribute('title', isCollapsed ? 'Show Controls' : 'Hide Controls');
+            toggleBtn.textContent = '☰';
+        });
     }
 
     addInteractionStyles() {
@@ -98,14 +109,66 @@ export class InteractionManager {
                 color: #f1faee;
                 border: 2px solid #6e9075;
                 border-radius: 10px;
-                padding: 15px;
+                padding: 15px 15px 15px 15px;
                 font-family: Arial, sans-serif;
                 box-shadow: 0 4px 8px rgba(0,0,0,0.3);
                 z-index: 1000;
                 max-height: 80vh;
                 overflow-y: auto;
+                transition: left 0.3s, bottom 0.3s, width 0.3s, height 0.3s;
             }
-            
+            #interaction-toggle {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: #6e9075;
+                color: #f1faee;
+                border: none;
+                border-radius: 4px;
+                font-size: 20px;
+                width: 36px;
+                height: 36px;
+                cursor: pointer;
+                z-index: 1100;
+                transition: background 0.3s;
+            }
+            #interaction-toggle:hover {
+                background: #93032e;
+            }
+            #interaction-panel.collapsed {
+                width: 48px;
+                min-width: 0;
+                max-width: 48px;
+                height: 48px;
+                padding: 0;
+                overflow: hidden;
+            }
+            #interaction-panel.collapsed .interaction-header,
+            #interaction-panel.collapsed .camera-buttons,
+            #interaction-panel.collapsed .object-info {
+                display: none !important;
+            }
+            #interaction-panel.collapsed #interaction-toggle {
+                right: 6px;
+                top: 6px;
+            }
+            @media (max-width: 600px) {
+                #interaction-panel {
+                    left: 0;
+                    right: 0;
+                    top: auto;
+                    bottom: 0;
+                    width: 100vw;
+                    max-width: 100vw;
+                    border-radius: 10px 10px 0 0;
+                    padding: 10px 5px 5px 5px;
+                }
+                #interaction-toggle {
+                    right: 10px;
+                    top: 10px;
+                }
+            }
+            /* ...existing styles for .interaction-header, .camera-buttons, .camera-btn, etc... */
             .interaction-header h3 {
                 margin: 0 0 15px 0;
                 color: #f1faee;
@@ -114,14 +177,12 @@ export class InteractionManager {
                 border-bottom: 1px solid #6e9075;
                 padding-bottom: 8px;
             }
-            
             .camera-buttons {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 8px;
                 margin-bottom: 15px;
             }
-            
             .camera-btn {
                 padding: 8px 6px;
                 background: #6e9075;
@@ -132,30 +193,9 @@ export class InteractionManager {
                 cursor: pointer;
                 transition: background 0.3s;
             }
-            
             .camera-btn:hover {
                 background: #93032e;
             }
-            
-            .interaction-info {
-                margin-bottom: 15px;
-                padding: 10px;
-                background: rgba(229, 209, 208, 0.1);
-                border-radius: 5px;
-            }
-            
-            .interaction-info h4 {
-                margin: 0 0 8px 0;
-                color: #e5d1d0;
-                font-size: 14px;
-            }
-            
-            .control-item {
-                font-size: 12px;
-                margin-bottom: 4px;
-                color: #f1faee;
-            }
-            
             .object-info {
                 background: rgba(147, 3, 46, 0.1);
                 border: 1px solid #93032e;
@@ -163,7 +203,6 @@ export class InteractionManager {
                 padding: 12px;
                 margin-top: 10px;
             }
-            
             .object-info h4 {
                 margin: 0 0 10px 0;
                 color: #93032e;
@@ -171,38 +210,31 @@ export class InteractionManager {
                 border-bottom: 1px solid #93032e;
                 padding-bottom: 5px;
             }
-            
             .object-info h3 {
                 margin: 0 0 10px 0;
                 color: #93032e;
                 font-size: 16px;
                 text-align: center;
             }
-            
             .object-details-content {
                 font-size: 12px;
                 line-height: 1.4;
                 color: #f1faee;
             }
-            
             .object-details-content strong {
                 color: #e5d1d0;
             }
-            
             #interaction-panel::-webkit-scrollbar {
                 width: 6px;
             }
-            
             #interaction-panel::-webkit-scrollbar-track {
                 background: rgba(110, 144, 117, 0.2);
                 border-radius: 3px;
             }
-            
             #interaction-panel::-webkit-scrollbar-thumb {
                 background: #6e9075;
                 border-radius: 3px;
             }
-            
             #interaction-panel::-webkit-scrollbar-thumb:hover {
                 background: #93032e;
             }
@@ -282,37 +314,100 @@ export class InteractionManager {
         const intersects = this.raycaster.intersectObjects(objectsToCheck, true);
 
         if (intersects.length > 0) {
-            // Prioritize lifts and shuttles - look for them first in intersections
             let selectedObject = null;
-            
             for (let intersection of intersects) {
                 const obj = intersection.object;
+                // Exclude all conveyors (userData, name, color)
+                if (
+                    (obj.userData && obj.userData.type === 'conveyor') ||
+                    (obj.name && (obj.name.startsWith('SOURCE_') || obj.name.startsWith('TARGET_') || obj.name.startsWith('PREZONE_')))
+                ) {
+                    continue;
+                }
+                if (obj.material && obj.material.color) {
+                    const colorHex = obj.material.color.getHex();
+                    if (
+                        colorHex === 0x2196F3 || // SOURCE (blue)
+                        colorHex === 0xFF9800 || // TARGET (orange)
+                        colorHex === 0x666666 || // Support pillar (grey)
+                        colorHex === 0x2c2c2c || colorHex === 0x404040 || (colorHex >= 0x1a1a1a && colorHex <= 0x404040) // Prezone (dark grey)
+                    ) {
+                        continue;
+                    }
+                }
+                // Exclude picking stations (userData, color)
+                if (
+                    (obj.userData && obj.userData.type === 'picking_station')
+                ) {
+                    continue;
+                }
+                if (obj.material && obj.material.color) {
+                    const colorHex = obj.material.color.getHex();
+                    if (
+                        colorHex === 0x4CAF50 || // Picking station (green)
+                        colorHex === 0x8b4513 || (colorHex >= 0x800000 && colorHex <= 0x8b7355) // Picking station (brown range)
+                    ) {
+                        continue;
+                    }
+                }
                 // Check for transporters (lifts and shuttles) first
                 if (obj.userData && (obj.userData.type === 'lift' || obj.userData.type === 'shuttle')) {
                     selectedObject = obj;
                     break;
                 }
             }
-            
             // If no transporter found, check for storage locations and other components
             if (!selectedObject) {
                 for (let intersection of intersects) {
                     const obj = intersection.object;
-                    // Skip frame elements if they don't have proper userData
-                    if (obj.userData && Object.keys(obj.userData).length > 0 && obj.userData.type) {
-                        selectedObject = obj;
-                        break;
+                    // Exclude all conveyors (userData, name, color)
+                    if (
+                        (obj.userData && obj.userData.type === 'conveyor') ||
+                        (obj.name && (obj.name.startsWith('SOURCE_') || obj.name.startsWith('TARGET_') || obj.name.startsWith('PREZONE_')))
+                    ) {
+                        continue;
                     }
-                    // Also include missing locations and color-coded objects
-                    else if (obj.material && obj.material.color) {
+                    if (obj.material && obj.material.color) {
                         const colorHex = obj.material.color.getHex();
-                        // Include all meaningful color-coded objects
+                        if (
+                            colorHex === 0x2196F3 || // SOURCE (blue)
+                            colorHex === 0xFF9800 || // TARGET (orange)
+                            colorHex === 0x666666 || // Support pillar (grey)
+                            colorHex === 0x2c2c2c || colorHex === 0x404040 || (colorHex >= 0x1a1a1a && colorHex <= 0x404040) // Prezone (dark grey)
+                        ) {
+                            continue;
+                        }
+                    }
+                    // Exclude picking stations (userData, color)
+                    if (
+                        (obj.userData && obj.userData.type === 'picking_station')
+                    ) {
+                        continue;
+                    }
+                    if (obj.material && obj.material.color) {
+                        const colorHex = obj.material.color.getHex();
+                        if (
+                            colorHex === 0x4CAF50 || // Picking station (green)
+                            colorHex === 0x8b4513 || (colorHex >= 0x800000 && colorHex <= 0x8b7355) // Picking station (brown range)
+                        ) {
+                            continue;
+                        }
+                    }
+                    // Exclude rack module frames by geometry
+                    if (obj.geometry) {
+                        const box = new THREE.Box3().setFromObject(obj);
+                        const size = box.getSize(new THREE.Vector3());
+                        if (size.x <= 0.15 || size.y <= 0.15 || size.z <= 0.15) {
+                            continue;
+                        }
+                    }
+                    // Include all meaningful color-coded objects
+                    if (obj.material && obj.material.color) {
+                        const colorHex = obj.material.color.getHex();
                         if (colorHex === 0xff4444 || colorHex === 0x8b0000 || // Missing locations
                             colorHex === 0xffd700 || colorHex === 0xffff00 || // Lifts (gold/yellow)
                             colorHex === 0xdc143c || colorHex === 0xff0000 || colorHex === 0x93032e || // Shuttles (red variants)
                             colorHex === 0xff8500 || // Buffer locations
-                            (colorHex >= 0x800000 && colorHex <= 0x8b7355) || // Picking stations (brown range)
-                            (colorHex >= 0x1a1a1a && colorHex <= 0x404040) || // Conveyors (dark grey)
                             (colorHex === 0x6e9075 || colorHex === 0xf1faee)) { // Storage locations
                             selectedObject = obj;
                             break;
@@ -320,12 +415,55 @@ export class InteractionManager {
                     }
                 }
             }
-            
-            // If still no object selected, use the first intersection (fallback)
-            if (!selectedObject && intersects.length > 0) {
-                selectedObject = intersects[0].object;
+            // If still no object selected, use the first intersection (fallback), but skip rack module frames and prezone conveyors
+            if (!selectedObject) {
+                for (let intersection of intersects) {
+                    const obj = intersection.object;
+                    // Exclude all conveyors (userData, name, color)
+                    if (
+                        (obj.userData && obj.userData.type === 'conveyor') ||
+                        (obj.name && (obj.name.startsWith('SOURCE_') || obj.name.startsWith('TARGET_') || obj.name.startsWith('PREZONE_')))
+                    ) {
+                        continue;
+                    }
+                    if (obj.material && obj.material.color) {
+                        const colorHex = obj.material.color.getHex();
+                        if (
+                            colorHex === 0x2196F3 || // SOURCE (blue)
+                            colorHex === 0xFF9800 || // TARGET (orange)
+                            colorHex === 0x666666 || // Support pillar (grey)
+                            colorHex === 0x2c2c2c || colorHex === 0x404040 || (colorHex >= 0x1a1a1a && colorHex <= 0x404040) // Prezone (dark grey)
+                        ) {
+                            continue;
+                        }
+                    }
+                    // Exclude picking stations (userData, color)
+                    if (
+                        (obj.userData && obj.userData.type === 'picking_station')
+                    ) {
+                        continue;
+                    }
+                    if (obj.material && obj.material.color) {
+                        const colorHex = obj.material.color.getHex();
+                        if (
+                            colorHex === 0x4CAF50 || // Picking station (green)
+                            colorHex === 0x8b4513 || (colorHex >= 0x800000 && colorHex <= 0x8b7355) // Picking station (brown range)
+                        ) {
+                            continue;
+                        }
+                    }
+                    // Exclude rack module frames by geometry
+                    if (obj.geometry) {
+                        const box = new THREE.Box3().setFromObject(obj);
+                        const size = box.getSize(new THREE.Vector3());
+                        if (size.x <= 0.15 || size.y <= 0.15 || size.z <= 0.15) {
+                            continue;
+                        }
+                    }
+                    selectedObject = obj;
+                    break;
+                }
             }
-            
             if (selectedObject) {
                 this.selectObject(selectedObject);
             } else {
@@ -466,7 +604,46 @@ export class InteractionManager {
         // Check for missing location obstacles and equipment by color
         else if (object.material && object.material.color) {
             const colorHex = object.material.color.getHex();
-            
+            // --- Conveyor and support pillar detection with early return ---
+            if (colorHex === 0x2196F3 || (object.name && object.name.startsWith('SOURCE_'))) {
+                objectType = 'SOURCE Conveyor';
+                objectDetails = `<strong>Type:</strong> SOURCE Material Flow<br><strong>Function:</strong> Incoming materials from warehouse<br><strong>Level:</strong> Upper conveyor level<br><strong>Direction:</strong> Warehouse → Picking Stations`;
+                detailsDiv.innerHTML = `<h3>${objectType}</h3><div class="object-details-content">${objectDetails}</div>`;
+                infoPanel.style.display = 'block';
+                console.log(`🎯 Selected: ${objectType}`);
+                console.log(`📍 Position: X=${worldPosition.x.toFixed(3)}, Y=${worldPosition.y.toFixed(3)}, Z=${worldPosition.z.toFixed(3)}`);
+                if (object.userData && Object.keys(object.userData).length > 0) {
+                    console.log(`📋 UserData:`, object.userData);
+                }
+                console.log(`🔧 Object:`, object);
+                return;
+            } else if (colorHex === 0xFF9800 || (object.name && object.name.startsWith('TARGET_'))) {
+                objectType = 'TARGET Conveyor';
+                objectDetails = `<strong>Type:</strong> TARGET Material Flow<br><strong>Function:</strong> Outgoing materials to warehouse<br><strong>Level:</strong> Lower conveyor level<br><strong>Direction:</strong> Picking Stations → Warehouse`;
+                detailsDiv.innerHTML = `<h3>${objectType}</h3><div class="object-details-content">${objectDetails}</div>`;
+                infoPanel.style.display = 'block';
+                console.log(`🎯 Selected: ${objectType}`);
+                console.log(`📍 Position: X=${worldPosition.x.toFixed(3)}, Y=${worldPosition.y.toFixed(3)}, Z=${worldPosition.z.toFixed(3)}`);
+                if (object.userData && Object.keys(object.userData).length > 0) {
+                    console.log(`📋 UserData:`, object.userData);
+                }
+                console.log(`🔧 Object:`, object);
+                return;
+            } else if (colorHex === 0x666666) {
+                objectType = 'Support Pillar';
+                objectDetails = `<strong>Type:</strong> Structural Support<br><strong>Function:</strong> Connects upper and lower conveyor levels<br><strong>Material:</strong> Steel construction<br><strong>Purpose:</strong> Multi-level conveyor system support`;
+                detailsDiv.innerHTML = `<h3>${objectType}</h3><div class="object-details-content">${objectDetails}</div>`;
+                infoPanel.style.display = 'block';
+                console.log(`🎯 Selected: ${objectType}`);
+                console.log(`📍 Position: X=${worldPosition.x.toFixed(3)}, Y=${worldPosition.y.toFixed(3)}, Z=${worldPosition.z.toFixed(3)}`);
+                if (object.userData && Object.keys(object.userData).length > 0) {
+                    console.log(`📋 UserData:`, object.userData);
+                }
+                console.log(`🔧 Object:`, object);
+                return;
+            }
+            // --- End conveyor/support pillar early return ---
+            // ...existing color checks for other types...
             if (colorHex === 0xff4444) { // Light red - Missing location (new transparent boxes)
                 objectType = 'Missing Location';
                 objectDetails = `<strong>Type:</strong> Unavailable Storage Position<br><strong>Reason:</strong> Building obstacle or restricted area<br><strong>Status:</strong> Permanently unavailable for storage<br><strong>Visual:</strong> Transparent placeholder showing blocked space`;

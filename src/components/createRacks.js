@@ -147,9 +147,9 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                                 // Create a transparent/ghost box for missing location
                                 if (uiConfig.showMissingIndicators !== false) {
                                     const missingLocationGeometry = new THREE.BoxGeometry(
-                                        constants.locationLength * 0.95,
-                                        0.8,
-                                        constants.locationDepth * 0.95
+                                        constants.locationDepth * 0.8,
+                                        constants.levelHeight * 0.8,
+                                        constants.locationLength * 0.8
                                     );
                                     const missingLocationMaterial = new THREE.MeshStandardMaterial({
                                         color: 0xff4444, // Light red color
@@ -167,7 +167,6 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                                     );
                                     missingBox.castShadow = true;
                                     missingBox.receiveShadow = true;
-                                    
                                     // Add metadata for interaction
                                     missingBox.userData = {
                                         type: 'Storage Location',
@@ -179,7 +178,6 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                                         location_type: 'Missing Location',
                                         status: 'Unavailable'
                                     };
-                                    
                                     moduleGroup.add(missingBox);
                                 }
                                 continue; // Skip creating the storage location
