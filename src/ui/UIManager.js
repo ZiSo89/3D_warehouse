@@ -33,7 +33,9 @@ export class UIManager {
         const uiContainer = document.createElement('div');
         uiContainer.id = 'ui-panel';
         uiContainer.innerHTML = `
-            <button id="ui-toggle" aria-label="Hide Info Panel" title="Hide Info Panel" style="position:absolute;top:8px;right:8px;background:#b7b7a4;color:#3d3d2d;border:none;border-radius:4px;font-size:20px;width:36px;height:36px;cursor:pointer;z-index:2000;transition:background 0.3s;display:block;visibility:visible;">☰</button>
+            <div class="toggle-sticky-wrapper">
+                <button id="ui-toggle" aria-label="Hide Info Panel" title="Hide Info Panel" style="background:#b7b7a4;color:#3d3d2d;border:none;border-radius:4px;font-size:20px;width:36px;height:36px;cursor:pointer;z-index:2000;transition:background 0.3s;display:block;visibility:visible;">☰</button>
+            </div>
             <div class="ui-header">
                 <h2>Warehouse Info</h2>
             </div>
