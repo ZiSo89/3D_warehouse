@@ -14,8 +14,29 @@
             background-color: #f1faee; /* Light cream from palette */
             font-family: 'Inter', Arial, sans-serif;
             overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
-        canvas { display: block; }
+        canvas { 
+            display: block; 
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw;
+            max-height: 100vh;
+            touch-action: none;
+        }
+        @media (max-width: 600px) {
+            html, body {
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
+            }
+            canvas {
+                width: 100vw !important;
+                height: 100vh !important;
+                max-width: 100vw;
+                max-height: 100vh;
+            }
+        }
     </style>
 </head>
 <body>

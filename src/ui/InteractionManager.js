@@ -23,6 +23,21 @@ export class InteractionManager {
         this.sceneManager.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
         this.sceneManager.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this));
 
+        // Touch events for mobile selection
+        this.sceneManager.renderer.domElement.addEventListener('touchstart', (event) => {
+            // Only handle single-finger tap (not drag/zoom)
+            if (event.touches.length === 1) {
+                // Simulate a click at the touch position
+                const touch = event.touches[0];
+                // Create a synthetic event with clientX/clientY
+                const fakeEvent = {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                };
+                this.onMouseClick(fakeEvent);
+            }
+        });
+
         // Keyboard events
         document.addEventListener('keydown', this.onKeyDown.bind(this));
 
