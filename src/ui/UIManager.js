@@ -10,6 +10,9 @@ export class UIManager {
             entry.className = 'info-log-entry';
             // Compact object details for mobile
             if (window.innerWidth <= 600 && /aisle:|level:|module:|depth:|position:/i.test(message)) {
+                // Try to extract the 'Selected: X' label
+                let labelMatch = message.match(/Selected: ?(<strong>.*?<\/strong>|[\w ]+)/i);
+                let label = labelMatch ? labelMatch[0] : '';
                 // Extract all key: value pairs
                 const regex = /<strong>(aisle|level|module|depth|position):<\/strong>\s*([\d]+)/gi;
                 let compact = [];
@@ -18,7 +21,7 @@ export class UIManager {
                     compact.push(`${m[1]}: ${m[2]}`);
                 }
                 if (compact.length) {
-                    entry.innerHTML = compact.join(' | ');
+                    entry.innerHTML = (label ? label + ' ' : '') + compact.join(' | ');
                 } else {
                     entry.innerHTML = message;
                 }
