@@ -51,12 +51,12 @@ export class InteractionManager {
         interactionPanel.innerHTML = `
             <button id="interaction-toggle" aria-label="Hide Panel" title="Hide Controls" style="position:absolute;top:8px;right:8px;background:#b7b7a4;color:#3d3d2d;border:none;border-radius:4px;font-size:20px;width:36px;height:36px;cursor:pointer;z-index:2000;transition:background 0.3s;display:block;visibility:visible;">☰</button>
             <div class="interaction-header">
-                <h3>Ρυθμίσεις & Ενέργειες</h3>
+                <h3>Settings & Actions</h3>
             </div>
             <div class="input-section">
                 <div class="ui-section">
                     <label for="aisles">Aisles:</label>
-                    <input type="range" id="aisles" min="1" max="8" value="${this.uiManager.uiConfig.aisles}">
+                    <input type="range" id="aisles" min="1" max="4" value="${this.uiManager.uiConfig.aisles}">
                     <span id="aisles-value">${this.uiManager.uiConfig.aisles}</span>
                 </div>
                 <div class="ui-section" id="levels-container">
@@ -65,22 +65,22 @@ export class InteractionManager {
                 </div>
                 <div class="ui-section">
                     <label for="modules">Modules per Aisle:</label>
-                    <input type="range" id="modules" min="3" max="15" value="${this.uiManager.uiConfig.modules_per_aisle}">
+                    <input type="range" id="modules" min="3" max="8" value="${this.uiManager.uiConfig.modules_per_aisle}">
                     <span id="modules-value">${this.uiManager.uiConfig.modules_per_aisle}</span>
                 </div>
                 <div class="ui-section">
                     <label for="locations">Locations per Module:</label>
-                    <input type="range" id="locations" min="2" max="8" value="${this.uiManager.uiConfig.locations_per_module}">
+                    <input type="range" id="locations" min="2" max="4" value="${this.uiManager.uiConfig.locations_per_module}">
                     <span id="locations-value">${this.uiManager.uiConfig.locations_per_module}</span>
                 </div>
                 <div class="ui-section">
                     <label for="depth">Storage Depth:</label>
-                    <input type="range" id="depth" min="1" max="6" value="${this.uiManager.uiConfig.storage_depth}">
+                    <input type="range" id="depth" min="1" max="3" value="${this.uiManager.uiConfig.storage_depth}">
                     <span id="depth-value">${this.uiManager.uiConfig.storage_depth}</span>
                 </div>
                 <div class="ui-section">
                     <label for="stations">Picking Stations:</label>
-                    <input type="range" id="stations" min="1" max="8" value="${this.uiManager.uiConfig.picking_stations}">
+                    <input type="range" id="stations" min="1" max="4" value="${this.uiManager.uiConfig.picking_stations}">
                     <span id="stations-value">${this.uiManager.uiConfig.picking_stations}</span>
                 </div>
                 <div class="ui-section animation-section">
