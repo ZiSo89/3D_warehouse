@@ -37,11 +37,16 @@ export function getCameraViewConfig(view, config) {
     const centerZ = warehouseLength / 2;
 
     switch(view) {
-        case 'overview':
+        case 'overview': {
+            // Calculate offsets based on the reference position and current warehouse config
+            const offsetX = 30.0;
+            const offsetY = 20.0;
+            const offsetZ = 30.0;
             return {
-                position: {x: centerX + 15, y: 15, z: centerZ + 20},
+                position: {x: centerX + offsetX, y: offsetY, z: centerZ + offsetZ},
                 target: {x: centerX, y: 0, z: centerZ}
             };
+        }
         case 'front':
             return {
                 position: {x: centerX, y: 8, z: warehouseLength + 15},
@@ -72,11 +77,17 @@ export function getCameraViewConfig(view, config) {
                 position: {x: warehouseWidth + 15, y: 10, z: centerZ},
                 target: {x: centerX, y: 0, z: centerZ}
             };
-        case 'prezoneView':
+        case 'prezoneView': {
+            // Example offset values for prezoneView (customize as needed)
+            const offsetX = -15; // No offset in X
+            const offsetY = 15; // Height
+            const offsetZ = -40; // Offset in Z (in front of warehouse)
+            const targetOffsetZ = -8; // Target slightly in front
             return {
-                position: {x: centerX, y: 12, z: -25},
-                target: {x: centerX, y: 0, z: -8}
+                position: {x: centerX + offsetX, y: offsetY, z: centerZ + offsetZ},
+                target: {x: centerX + offsetX, y: 0, z: centerZ + targetOffsetZ}
             };
+        }
         case 'aisleView':
             return {
                 position: {x: rackAndAisleWidth / 2, y: 8, z: centerZ + 10},

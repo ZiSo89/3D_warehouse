@@ -1,9 +1,19 @@
 
 
+/**
+ * InteractionManager handles user interaction with the 3D scene and the control panel UI.
+ * @class InteractionManager
+ * @param {SceneManager} sceneManager - The main scene manager instance.
+ * @param {UIManager} uiManager - The UI manager instance.
+ */
 import { getCameraViewConfig, syncLevelsPerAisle } from './uiUtils.js';
 import * as THREE from 'three';
 
 export class InteractionManager {
+    /**
+     * @param {SceneManager} sceneManager
+     * @param {UIManager} uiManager
+     */
     constructor(sceneManager, uiManager) {
         this.sceneManager = sceneManager;
         this.uiManager = uiManager;
@@ -20,6 +30,9 @@ export class InteractionManager {
         this.init();
         this.createCameraPresets();
     }
+    /**
+     * Initializes event listeners and creates the interaction UI.
+     */
     init() {
         // Mouse events
         this.sceneManager.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
@@ -47,6 +60,9 @@ export class InteractionManager {
         this.createInteractionUI();
     }
 
+    /**
+     * Creates camera preset configurations.
+     */
     createCameraPresets() {
         // Camera presets will be calculated dynamically based on current warehouse config
         this.cameraPresets = {
@@ -58,6 +74,9 @@ export class InteractionManager {
         };
     }
 
+    /**
+     * Creates the main interaction panel UI and binds events.
+     */
     createInteractionUI() {
         // Prevent duplicate panel creation
         if (document.getElementById('interaction-panel')) {
@@ -170,6 +189,10 @@ export class InteractionManager {
     }
 
 
+    /**
+     * Binds event listeners to the input panel controls.
+     * @param {HTMLElement} panel - The DOM element containing the input panel controls.
+     */
     bindInputPanelEvents(panel) {
         // Reset to Default button
         const resetDefaultBtn = panel.querySelector('#reset-default-btn');
@@ -285,17 +308,27 @@ export class InteractionManager {
     }
 
     // Show loading overlay
+    /**
+     * Shows the loading overlay.
+     */
     showLoadingOverlay() {
         let overlay = document.getElementById('loading-overlay');
         if (overlay) overlay.style.display = 'flex';
     }
 
     // Hide loading overlay
+    /**
+     * Hides the loading overlay.
+     */
     hideLoadingOverlay() {
         let overlay = document.getElementById('loading-overlay');
         if (overlay) overlay.style.display = 'none';
     }
 
+    /**
+     * Updates the level input sliders for each aisle.
+     * @param {HTMLElement} panel - The DOM element containing the input panel controls.
+     */
     updateLevelInputs(panel) {
         const aisleCount = this.uiManager.uiConfig.aisles;
         const container = panel.querySelector('#levels-container');
@@ -331,6 +364,10 @@ export class InteractionManager {
      * typically after importing a configuration or programmatically changing settings.
      * @param {HTMLElement} panel - The DOM element containing the input panel controls.
      */
+    /**
+     * Updates the input panel UI elements to reflect the current configuration in uiManager.uiConfig.
+     * @param {HTMLElement} panel - The DOM element containing the input panel controls.
+     */
     updateInputPanelFromConfig(panel) {
         // Update all slider values and displays
         panel.querySelector('#aisles').value = this.uiManager.uiConfig.aisles;
@@ -348,6 +385,10 @@ export class InteractionManager {
     }
 
 
+    /**
+     * Handles mouse click events for object selection in the 3D scene.
+     * @param {MouseEvent|Object} event - The mouse or synthetic event.
+     */
     onMouseClick(event) {
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -431,14 +472,32 @@ export class InteractionManager {
         }
     }
 
+    /**
+     * Handles mouse move events for hover effects in the 3D scene.
+     * @param {MouseEvent} event
+     */
     onMouseMove(event) {
         // Implement your mouse move logic here
     }
 
+    /**
+     * Handles keyboard events for shortcuts and controls.
+     * @param {KeyboardEvent} event
+     */
     onKeyDown(event) {
-        // Implement your keydown logic here
+        // Log camera position when 'C' is pressed
+        if (event.key === 'c' || event.key === 'C') {
+            const cam = this.sceneManager.camera;
+            if (cam && cam.position) {
+                console.log('Camera position:', cam.position);
+            }
+        }
     }
 
+    /**
+     * Handles selection of a 3D object and updates the info panel.
+     * @param {THREE.Object3D} object
+     */
     selectObject(object) {
         // Deselect previous object
         this.deselectObject();
@@ -555,6 +614,9 @@ export class InteractionManager {
         }
     }
 
+    /**
+     * Deselects the currently selected object.
+     */
     deselectObject() {
         if (this.selectedObject && this.originalMaterial) {
             // Dispose highlight material to avoid memory leaks
@@ -583,6 +645,10 @@ export class InteractionManager {
         document.getElementById('object-info').style.display = 'none';
     }
 
+    /**
+     * Displays detailed information about the selected object in the info panel.
+     * @param {THREE.Object3D} object
+     */
     showObjectInfo(object) {
         const infoPanel = document.getElementById('object-info');
         const detailsDiv = document.getElementById('object-details');
@@ -592,6 +658,9 @@ export class InteractionManager {
         // You can copy the full implementation here if needed.
     }
 
+    /**
+     * Binds event listeners to camera preset buttons.
+     */
     bindCameraEvents() {
         const cameraButtons = document.querySelectorAll('.camera-btn');
         cameraButtons.forEach(button => {
@@ -602,6 +671,10 @@ export class InteractionManager {
         });
     }
 
+    /**
+     * Sets the camera to a preset view.
+     * @param {string} presetName
+     */
     setCameraPreset(presetName) {
         const cfg = this.uiManager.getConfig ? this.uiManager.getConfig() : this.uiManager.uiConfig;
         const { position, target } = getCameraViewConfig(presetName, cfg);
@@ -611,6 +684,12 @@ export class InteractionManager {
         );
     }
 
+    /**
+     * Animates the camera to a target position and look-at point.
+     * @param {THREE.Vector3} targetPosition
+     * @param {THREE.Vector3} targetLookAt
+     * @param {number} [duration=1000]
+     */
     animateCamera(targetPosition, targetLookAt, duration = 1000) {
         const startPosition = this.sceneManager.camera.position.clone();
         const startTarget = this.sceneManager.controls.target.clone();

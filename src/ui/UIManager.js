@@ -36,6 +36,9 @@ export class UIManager {
             logPanel.scrollTop = logPanel.scrollHeight;
         }
     }
+    /**
+     * @param {SceneManager} sceneManager
+     */
     constructor(sceneManager) {
         this.sceneManager = sceneManager;
         this.uiConfig = {
@@ -51,6 +54,9 @@ export class UIManager {
         this.updateStorageCapacity();
     }
 
+    /**
+     * Creates the Info Panel UI and attaches it to the DOM.
+     */
     createUI() {
         // Create Info Panel container (info only)
         const uiContainer = document.createElement('div');
@@ -97,6 +103,9 @@ export class UIManager {
         });
     }
 
+    /**
+     * Injects dynamic CSS styles for the Info Panel UI.
+     */
     addStyles() {
         const style = document.createElement('style');
         // Generate CSS variables from UI_THEME
@@ -313,11 +322,18 @@ export class UIManager {
 
     // UIManager only manages Info Panel display and updates.
 
+    /**
+     * Updates the storage capacity display in the UI.
+     */
     updateStorageCapacity() {
         const totalCapacity = this.calculateStorageCapacity();
         document.getElementById('storage-capacity').textContent = totalCapacity.toLocaleString();
     }
 
+    /**
+     * Calculates the total available storage capacity based on the current config and missing locations.
+     * @returns {number} Total storage locations available.
+     */
     calculateStorageCapacity() {
         let total = 0;
         
@@ -369,12 +385,20 @@ export class UIManager {
         return total;
     }
 
+    /**
+     * Returns the current warehouse configuration.
+     * @returns {WarehouseConfig}
+     */
     getConfig() {
         return this.uiConfig;
     }
 
     // Duplicate addLog removed. The correct version is at the top of the file, without timestamp.
 
+    /**
+     * Sets the camera to a predefined view.
+     * @param {string} view - The name of the camera view preset.
+     */
     setCameraView(view) {
         const camera = this.sceneManager.camera;
         const controls = this.sceneManager.controls;
