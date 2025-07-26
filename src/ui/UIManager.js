@@ -52,6 +52,36 @@ export class UIManager {
         
         this.createUI();
         this.updateStorageCapacity();
+
+        // Add camera controls info overlay for desktop only
+        function isMobileDevice() {
+            return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(navigator.userAgent);
+        }
+        if (!isMobileDevice()) {
+            const infoDiv = document.createElement('div');
+            infoDiv.innerHTML = `
+            <strong>Camera Controls</strong><br>
+            <span style="font-size:15px;">
+            W/S: Forward/Back &nbsp; | &nbsp; A/D: Left/Right<br>
+            Q/E: Up/Down &nbsp; | &nbsp; R/F: Zoom In/Out
+            </span>
+            `;
+            infoDiv.style.position = 'fixed';
+            infoDiv.style.top = '18px';
+            infoDiv.style.left = '50%';
+            infoDiv.style.transform = 'translateX(-50%)';
+            infoDiv.style.background = 'rgba(30,30,30,0.72)';
+            infoDiv.style.color = '#fff';
+            infoDiv.style.fontFamily = 'sans-serif';
+            infoDiv.style.fontSize = '17px';
+            infoDiv.style.padding = '10px 28px 8px 28px';
+            infoDiv.style.borderRadius = '8px';
+            infoDiv.style.boxShadow = '0 2px 12px rgba(0,0,0,0.18)';
+            infoDiv.style.zIndex = 10000;
+            infoDiv.style.opacity = '0.3';
+            infoDiv.style.pointerEvents = 'none';
+            document.body.appendChild(infoDiv);
+        }
     }
 
     /**
