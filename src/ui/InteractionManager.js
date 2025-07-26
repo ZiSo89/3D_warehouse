@@ -63,6 +63,16 @@ export class InteractionManager {
         if (document.getElementById('interaction-panel')) {
             return;
         }
+        // Add loading overlay to body (hidden by default)
+        if (!document.getElementById('loading-overlay')) {
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.id = 'loading-overlay';
+            loadingOverlay.innerHTML = `
+                <div class="loading-spinner"></div>
+            `;
+            loadingOverlay.style.display = 'none';
+            document.body.appendChild(loadingOverlay);
+        }
         const interactionPanel = document.createElement('div');
         interactionPanel.id = 'interaction-panel';
         interactionPanel.innerHTML = `
@@ -176,7 +186,11 @@ export class InteractionManager {
             this.uiManager.uiConfig = JSON.parse(JSON.stringify(defaultConfig));
             this.updateInputPanelFromConfig(panel);
             this.uiManager.updateStorageCapacity();
-            this.sceneManager.buildWarehouse(this.uiManager.uiConfig);
+            this.showLoadingOverlay();
+            setTimeout(() => {
+                this.sceneManager.buildWarehouse(this.uiManager.uiConfig);
+                this.hideLoadingOverlay();
+            }, 400);
         });
         // Range sliders
         const updateValue = (id, configKey) => {
@@ -247,21 +261,39 @@ export class InteractionManager {
         panel.querySelector('#import-file-input').addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                this.showLoadingOverlay();
                 this.sceneManager.importWarehouseConfiguration(file, (uiConfig, warehouseConfig) => {
                     this.uiManager.uiConfig = uiConfig;
                     this.updateInputPanelFromConfig(panel);
                     this.uiManager.updateStorageCapacity();
                     this.sceneManager.buildWarehouse(this.uiManager.uiConfig);
-                    alert(`Successfully imported warehouse configuration: "${warehouseConfig.metadata.name}"`);
+                    setTimeout(() => {
+                        this.hideLoadingOverlay();
+                    }, 400);
                 });
                 event.target.value = '';
             }
         });
-
         // Rebuild button
         panel.querySelector('#rebuild-btn').addEventListener('click', () => {
-            this.sceneManager.buildWarehouse(this.uiManager.getConfig());
+            this.showLoadingOverlay();
+            setTimeout(() => {
+                this.sceneManager.buildWarehouse(this.uiManager.getConfig());
+                this.hideLoadingOverlay();
+            }, 400);
         });
+    }
+
+    // Show loading overlay
+    showLoadingOverlay() {
+        let overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'flex';
+    }
+
+    // Hide loading overlay
+    hideLoadingOverlay() {
+        let overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'none';
     }
 
     updateLevelInputs(panel) {

@@ -1,21 +1,3 @@
-//
-// To keep the palette in sync between JS and CSS, run:
-//    node src/ui/theme.js
-// This will generate src/ui/theme.css with the CSS variables.
-//
-// This script is safe to use as an ES module (for browser import) and as a Node.js script.
-if (typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module) {
-    // Node.js: generate theme.css from UI_THEME
-    const fs = require('fs');
-    const path = require('path');
-    const { UI_THEME } = require('./theme.js');
-    const cssVars = Object.entries(UI_THEME)
-        .map(([key, value]) => `  --ui-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`)
-        .join('\n');
-    const css = `/* theme.css\n   This file is auto-generated from theme.js (UI_THEME).\n   Do not edit directly. Edit theme.js and re-run the sync script.\n*/\n:root {\n${cssVars}\n}\n`;
-    fs.writeFileSync(path.join(__dirname, 'theme.css'), css, 'utf8');
-    console.log('theme.css generated from UI_THEME');
-}
 // theme.js
 // Central theme config for UI colors and palette
 
