@@ -45,7 +45,7 @@ function createPickingStation(parent, uiConfig) {
 
         // Determine if this station is special (buffer, reserved, etc.)
         const special = specialStations.find(s => s.index === i);
-        let color = 0x6e9075; // default theme sectionBorder (green)
+        let color = 0x2d3a2e; // darker green shade
         let emissive = 0x000000;
         let emissiveIntensity = 0.0;
         if (special) {
@@ -68,8 +68,8 @@ function createPickingStation(parent, uiConfig) {
             clearcoat: 0.5,
             clearcoatRoughness: 0.18,
             reflectivity: 0.5,
-            transparent: true,
-            opacity: 0.85,
+            transparent: false,
+            opacity: 1.0,
             emissive: emissive,
             emissiveIntensity: emissiveIntensity
         });
@@ -117,8 +117,8 @@ function createMultiLiftConveyorSystem(parent, uiConfig, constants) {
     const targetAisle = 0; // First aisle (same as AnimationManager for simplicity)
     const liftX = targetAisle * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25;
     
+    // Ensure mainPath and mainSourcePath are collinear in X and Z for visual continuity
     const mainPath = [
-        { x: mainPickingX, y: 0.25, z: 0, name: "Main Picking Station (Index 1)" },
         { x: mainPickingX, y: targetLevel, z: frontOffset, name: "Forward Step" },
         { x: liftX, y: targetLevel, z: frontOffset, name: "Left Alignment" },
         { x: liftX, y: targetLevel, z: 4, name: "Distribution Hub" }
@@ -133,8 +133,7 @@ function createMultiLiftConveyorSystem(parent, uiConfig, constants) {
     const mainSourcePath = [
         { x: liftX + horizontalOffset, y: sourceLevel, z: 4, name: "SOURCE Distribution Hub" },
         { x: liftX + horizontalOffset, y: sourceLevel, z: frontOffset, name: "SOURCE Left Alignment" },
-        { x: mainPickingX + horizontalOffset, y: sourceLevel, z: frontOffset, name: "SOURCE Forward Step" },
-        { x: mainPickingX + horizontalOffset, y: 0.35, z: 0, name: "SOURCE Main Picking Station (Index 1)" }
+        { x: mainPickingX + horizontalOffset, y: sourceLevel, z: frontOffset, name: "SOURCE Forward Step" }
     ];
     
     for (let i = 0; i < mainSourcePath.length - 1; i++) {
@@ -147,45 +146,43 @@ function createMultiLiftConveyorSystem(parent, uiConfig, constants) {
         if (adjustedStationIndex !== mainStationIndex) { // Skip main station (index 1) already connected
             const stationX = adjustedStationIndex * stationFullWidth - totalPrezoneWidth / 2 + stationWidth / 2;
             
-            // Connect each station to the main distribution line (TARGET - lower level)
+            // Connect each station to the main distribution line (TARGET - lower level) - match the length and structure of mainPath
             const stationPath = [
-                { x: stationX, y: 0.25, z: 0, name: `Picking Station ${adjustedStationIndex}` },
-                { x: stationX, y: targetLevel, z: 1, name: `Station ${adjustedStationIndex} Exit` },
-                { x: liftX, y: targetLevel, z: 2.5, name: `Station ${adjustedStationIndex} Distribution` }
+                { x: stationX, y: targetLevel, z: frontOffset, name: `Station ${adjustedStationIndex} Forward Step` },
+                { x: liftX, y: targetLevel, z: frontOffset, name: `Station ${adjustedStationIndex} Left Alignment` }
             ];
             
             // Create station connection conveyors (TARGET)
             for (let i = 0; i < stationPath.length - 1; i++) {
-                createConveyorSegment(parent, stationPath[i], stationPath[i + 1], `Station${adjustedStationIndex}_TARGET_${i + 1}`, 'target');
+              createConveyorSegment(parent, stationPath[i], stationPath[i + 1], `Station${adjustedStationIndex}_TARGET_${i + 1}`, 'target');
             }
             
-            // Create SOURCE conveyors (upper level) - reverse direction with offset
+            // Create SOURCE conveyors (upper level) - match the length and structure of mainSourcePath
             const stationSourcePath = [
-                { x: liftX + horizontalOffset, y: sourceLevel, z: 2.5, name: `SOURCE Station ${adjustedStationIndex} Distribution` },
-                { x: stationX + horizontalOffset, y: sourceLevel, z: 1, name: `SOURCE Station ${adjustedStationIndex} Exit` },
-                { x: stationX + horizontalOffset, y: 0.35, z: 0, name: `SOURCE Picking Station ${adjustedStationIndex}` }
-            ];
+                { x: liftX + horizontalOffset, y: sourceLevel, z: frontOffset, name: `SOURCE Station ${adjustedStationIndex} Main Forward` },
+                { x: stationX + horizontalOffset, y: sourceLevel, z: frontOffset, name: `SOURCE Station ${adjustedStationIndex} Forward Step` }            ];
             
             // Create station SOURCE connection conveyors
             for (let i = 0; i < stationSourcePath.length - 1; i++) {
-                createConveyorSegment(parent, stationSourcePath[i], stationSourcePath[i + 1], `Station${adjustedStationIndex}_SOURCE_${i + 1}`, 'source');
+             createConveyorSegment(parent, stationSourcePath[i], stationSourcePath[i + 1], `Station${adjustedStationIndex}_SOURCE_${i + 1}`, 'source');
             }
         }
     }
     
     // Create dual-level distribution conveyors
     const distributionZ = 4;
-    const distributionStart = liftX - 2; // Start aligned with first lift
+    const distributionStart = liftX; // Start aligned with first lift
     const distributionEnd = (uiConfig.aisles - 1) * rackAndAisleWidth + 2;
     
     // SOURCE distribution conveyor (UPPER level) with offset
     const sourceDistStart = { x: distributionStart + horizontalOffset, y: sourceLevel, z: distributionZ, name: "SOURCE Distribution Start" };
-    const sourceDistEnd = { x: distributionEnd + horizontalOffset, y: sourceLevel, z: distributionZ, name: "SOURCE Distribution End" };
+    // Extend sourceDistEnd further left to overlap the last conveyor
+    const sourceDistEnd = { x: distributionEnd + horizontalOffset + 1.3, y: sourceLevel, z: distributionZ, name: "SOURCE Distribution End" };
     createConveyorSegment(parent, sourceDistStart, sourceDistEnd, "Distribution_SOURCE", 'source');
     
     // TARGET distribution conveyor (LOWER level)
     const targetDistStart = { x: distributionStart, y: targetLevel, z: distributionZ, name: "TARGET Distribution Start" };
-    const targetDistEnd = { x: distributionEnd, y: targetLevel, z: distributionZ, name: "TARGET Distribution End" };
+    const targetDistEnd = { x: distributionEnd + horizontalOffset + 1.3, y: targetLevel, z: distributionZ, name: "TARGET Distribution End" };
     createConveyorSegment(parent, targetDistStart, targetDistEnd, "Distribution_TARGET", 'target');
     
     // Create dual-level conveyor branches to each lift
@@ -198,12 +195,12 @@ function createMultiLiftConveyorSystem(parent, uiConfig, constants) {
         const sourceBranchPath = [
             { x: liftX + horizontalOffset, y: sourceLevel, z: distributionZ, name: `SOURCE Distribution Point ${aisle}` },
             { x: liftX + horizontalOffset, y: sourceLevel, z: liftApproachZ, name: `SOURCE Lift ${aisle} Approach` },
-            { x: liftX + horizontalOffset, y: sourceLevel, z: liftFinalZ, name: `SOURCE Lift ${aisle} Final` }
+            { x: liftX + horizontalOffset, y: sourceLevel, z: liftFinalZ - 1, name: `SOURCE Lift ${aisle} Final` }
         ];
         
         // TARGET branch (materials coming FROM lift) - LOWER level
         const targetBranchPath = [
-            { x: liftX, y: targetLevel, z: liftFinalZ, name: `TARGET Lift ${aisle} Final` },
+            { x: liftX, y: targetLevel, z: liftFinalZ - 1, name: `TARGET Lift ${aisle} Final` },
             { x: liftX, y: targetLevel, z: liftApproachZ, name: `TARGET Lift ${aisle} Approach` },
             { x: liftX, y: targetLevel, z: distributionZ, name: `TARGET Distribution Point ${aisle}` }
         ];
