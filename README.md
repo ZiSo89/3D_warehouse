@@ -28,7 +28,7 @@ A web-based 3D warehouse visualization and simulation tool built with Three.js. 
 
 ```
 ├── index.html              # Main HTML file
-├── main.js                 # Application entry point
+├── main.js                 # Application entry point (keyboard/game navigation, Vite entry)
 ├── package.json            # Project dependencies
 └── src/
     ├── animation/          # Animation system components
@@ -45,15 +45,17 @@ A web-based 3D warehouse visualization and simulation tool built with Three.js. 
     │   └── SceneManager.js
     └── ui/                # User interface components
         ├── InteractionManager.js
-        └── UIManager.js
+        └── UIManager.js    # UI panel, info overlay, capacity/missing display
 ```
 
 ## Getting Started
 
+
+
 ### Prerequisites
 
 - A modern web browser with WebGL support
-- A local web server (due to ES6 module requirements)
+- [Node.js](https://nodejs.org/) and npm installed
 
 ### Installation
 
@@ -63,37 +65,33 @@ A web-based 3D warehouse visualization and simulation tool built with Three.js. 
    cd 3D_warehouse
    ```
 
-2. Start a local web server. You can use:
-   
-   **Using Python:**
-   ```bash
-   # Python 3
-   python -m http.server 8000
-   
-   # Python 2
-   python -m SimpleHTTPServer 8000
-   ```
-   
-   **Using Node.js (if you have live-server installed):**
-   ```bash
-   npx live-server
-   ```
-   
-   **Using VS Code:**
-   - Install the "Live Server" extension
-   - Right-click on `index.html` and select "Open with Live Server"
 
-3. Open your browser and navigate to `http://localhost:8000`
+2. Install dependencies and start the Vite dev server:
+
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+   This will start the Vite development server. By default, it will be available at `http://localhost:5173` (or the port shown in your terminal).
+
+3. Open your browser and navigate to the provided local address (e.g., `http://localhost:5173`).
 
 ## Usage
 
 1. **Warehouse Configuration**: Use the control panel on the right to adjust warehouse parameters
 2. **Camera Navigation**: 
    - Use mouse to orbit, zoom, and pan around the 3D scene
+   - Use keyboard for game-like navigation:
+     - **W/S**: Forward/Back
+     - **A/D**: Left/Right
+     - **Q/E**: Up/Down
+     - **R/F**: Zoom In/Out
+   - (A semi-transparent overlay with these controls appears at the top of the screen on desktop)
    - Click camera view buttons for predefined perspectives
 3. **Real-time Updates**: Changes to configuration parameters immediately update the 3D visualization
 4. **Container Animation**: Click "Start Animation" to watch a container flow through the warehouse system
-5. **Capacity Monitoring**: The storage capacity display shows total available locations
+5. **Capacity Monitoring**: The storage capacity display shows total available locations and the number of missing locations (excluded by config)
 
 ## How the UI Works
 
@@ -118,7 +116,7 @@ The 3D OSR Warehouse Simulator features an interactive UI panel on the right sid
     (Use the file input to select your `.json` file.)
 
 - **Info Panel:**  
-  The left panel displays real-time information about storage capacity, selected objects, and logs of recent actions.
+  The right panel displays real-time information about storage capacity, missing locations, selected objects, and logs of recent actions.
 
 - **Object Selection:**  
   Click on any warehouse component (rack, lift, shuttle, etc.) in the 3D view to see its details in the info panel.
@@ -171,6 +169,15 @@ The warehouse configuration JSON file has the following structure:
 3. The warehouse will update to reflect your configuration.
 
 ---
+
+
+## Recent Improvements (2025)
+
+- Switched to Vite dev server for modern development workflow
+- Added smooth, game-like keyboard navigation (WASD, Q/E, R/F)
+- Added a semi-transparent info overlay for camera controls (desktop only)
+- Storage capacity panel now displays both total and missing locations
+- UI/UX improvements for clarity and mobile/desktop distinction
 
 ## Project Improvement Suggestions
 
