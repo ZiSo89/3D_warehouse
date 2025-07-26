@@ -171,36 +171,6 @@ The warehouse configuration JSON file has the following structure:
 ---
 
 
-## Recent Improvements (2025)
-
-- Switched to Vite dev server for modern development workflow
-- Added smooth, game-like keyboard navigation (WASD, Q/E, R/F)
-- Added a semi-transparent info overlay for camera controls (desktop only)
-- Storage capacity panel now displays both total and missing locations
-- UI/UX improvements for clarity and mobile/desktop distinction
-
-## Project Improvement Suggestions
-
-**UI/UX**
-- Add tooltips or inline help for each UI control to clarify their effect.
-- Provide a visual indicator or animation when the warehouse is rebuilt or a config is imported.
-- Allow users to reset the configuration to default with a single button.
-- Add error messages or validation for out-of-range or invalid config values.
-- Make the UI panel draggable or resizable for better usability on small screens.
-
-**Code/Architecture**
-- Refactor repeated logic in UIManager and InteractionManager (e.g., config sync, event binding).
-- Move hardcoded color values to a central theme or config file for easier palette changes.
-- Add more comments and JSDoc for public methods and configuration structures.
-- Consider using a state management pattern for UI config (e.g., Redux or a simple observable).
-- Add unit tests for config import/export and UI logic.
-
-**Features**
-- Allow saving/loading multiple named configurations.
-- Add undo/redo for config changes.
-- Support for more complex warehouse layouts (e.g., L-shaped, multi-zone).
-- Add keyboard shortcuts for camera presets and common actions.
-- Provide a summary of warehouse metrics (e.g., total storage, used/unused, etc.) in the UI.
 
 ## Technologies Used
 
@@ -240,10 +210,3 @@ This project is open source and available under the [MIT License](LICENSE).
 - Real-time collision detection
 - Advanced pathfinding algorithms
 
-## Author
-
-Created as part of warehouse modeling and simulation coursework.
-
----
-
-For questions or support, please open an issue on GitHub.
