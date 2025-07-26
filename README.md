@@ -95,6 +95,106 @@ A web-based 3D warehouse visualization and simulation tool built with Three.js. 
 4. **Container Animation**: Click "Start Animation" to watch a container flow through the warehouse system
 5. **Capacity Monitoring**: The storage capacity display shows total available locations
 
+## How the UI Works
+
+The 3D OSR Warehouse Simulator features an interactive UI panel on the right side of the screen. This panel allows users to:
+
+- **Adjust Warehouse Parameters:**  
+  Use sliders to set the number of aisles, modules per aisle, locations per module, storage depth, and picking stations.  
+  For each aisle, you can individually set the number of levels.
+
+- **Rebuild Warehouse:**  
+  After changing parameters, click "Rebuild Warehouse" to update the 3D model.
+
+- **Camera Presets:**  
+  Use the camera buttons to quickly switch between Overview, Top, Side, Prezone, and Aisle views.
+
+- **Container Animation:**  
+  Start or stop container movement animations with the animation button.
+
+- **Configuration Management:**  
+  - **Export JSON:** Save the current warehouse configuration as a JSON file.
+  - **Import JSON:** Load a warehouse configuration from a JSON file.  
+    (Use the file input to select your `.json` file.)
+
+- **Info Panel:**  
+  The left panel displays real-time information about storage capacity, selected objects, and logs of recent actions.
+
+- **Object Selection:**  
+  Click on any warehouse component (rack, lift, shuttle, etc.) in the 3D view to see its details in the info panel.
+
+## Configuring the JSON File
+
+The warehouse configuration JSON file has the following structure:
+
+```json
+{
+  "metadata": {
+    "name": "MyWarehouseConfig",
+    "created": "2025-07-26T12:00:00.000Z",
+    "version": "1.0.0",
+    "description": "Exported warehouse configuration"
+  },
+  "warehouse_parameters": {
+    "aisles": 3,
+    "levels_per_aisle": [5, 6, 4],
+    "modules_per_aisle": 8,
+    "locations_per_module": 4,
+    "storage_depth": 2,
+    "picking_stations": 3
+  },
+  "missing_locations": [],
+  "location_types": {
+    "buffer_locations": [],
+    "default_type": "Storage"
+  },
+  "calculated_metrics": {
+    "total_locations": 576,
+    "total_modules": 24,
+    "total_levels": 15
+  }
+}
+```
+
+- **aisles:** Number of aisles in the warehouse.
+- **levels_per_aisle:** Array specifying the number of levels for each aisle.
+- **modules_per_aisle:** Number of modules (sections) per aisle.
+- **locations_per_module:** Number of storage locations per module.
+- **storage_depth:** Depth of storage (number of locations deep).
+- **picking_stations:** Number of picking stations in the prezone.
+- **missing_locations:** (Optional) List of locations to exclude from storage.
+- **location_types:** (Optional) Specify buffer locations and default type.
+
+**To use a custom configuration:**
+1. Export a template from the UI or create a JSON file matching the structure above.
+2. Click "Import JSON" in the UI and select your file.
+3. The warehouse will update to reflect your configuration.
+
+---
+
+## Project Improvement Suggestions
+
+**UI/UX**
+- Add tooltips or inline help for each UI control to clarify their effect.
+- Provide a visual indicator or animation when the warehouse is rebuilt or a config is imported.
+- Allow users to reset the configuration to default with a single button.
+- Add error messages or validation for out-of-range or invalid config values.
+- Make the UI panel draggable or resizable for better usability on small screens.
+
+**Code/Architecture**
+- Refactor repeated logic in UIManager and InteractionManager (e.g., config sync, event binding).
+- Move hardcoded color values to a central theme or config file for easier palette changes.
+- Add more comments and JSDoc for public methods and configuration structures.
+- Consider using a state management pattern for UI config (e.g., Redux or a simple observable).
+- Add unit tests for config import/export and UI logic.
+
+**Features**
+- Allow saving/loading multiple named configurations.
+- Add undo/redo for config changes.
+- Support for more complex warehouse layouts (e.g., L-shaped, multi-zone).
+- Add keyboard shortcuts for camera presets and common actions.
+- Provide a summary of warehouse metrics (e.g., total storage, used/unused, etc.) in the UI.
+
 ## Technologies Used
 
 - **Three.js**: 3D graphics and rendering

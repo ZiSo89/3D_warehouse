@@ -206,7 +206,7 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                             } else {
                                 // Regular storage locations - existing color scheme
                                 locationMaterial = new THREE.MeshStandardMaterial({
-                                    color: (d % 2 === 0) ? 0x6e9075 : 0xf1faee, // Green and cream from palette
+                                    color: (d % 2 === 0) ? 0x6e9075 : 0x9ca3af, // Green and muted grey (was cream)
                                     metalness: 0.3,
                                     roughness: 0.7
                                 });

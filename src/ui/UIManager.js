@@ -1,3 +1,7 @@
+import { getCameraViewConfig } from './uiUtils.js';
+import * as THREE from 'three';
+import { UI_THEME } from './theme.js';
+
 export class UIManager {
     /**
      * Appends a log message to the Logs / Info panel.
@@ -53,7 +57,7 @@ export class UIManager {
         uiContainer.id = 'ui-panel';
         uiContainer.innerHTML = `
             <div class="toggle-sticky-wrapper">
-                <button id="ui-toggle" aria-label="Hide Info Panel" title="Hide Info Panel" style="background:#b7b7a4;color:#3d3d2d;border:none;border-radius:4px;font-size:20px;width:36px;height:36px;cursor:pointer;z-index:2000;transition:background 0.3s;display:block;visibility:visible;">☰</button>
+                <button id="ui-toggle" aria-label="Hide Info Panel" title="Hide Info Panel">☰</button>
             </div>
             <div class="ui-header">
                 <h2>Warehouse Info</h2>
@@ -95,13 +99,20 @@ export class UIManager {
 
     addStyles() {
         const style = document.createElement('style');
+        // Generate CSS variables from UI_THEME
+        const themeVars = Object.entries(UI_THEME)
+            .map(([key, value]) => `--ui-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value};`)
+            .join('\n                ');
         style.textContent = `
+            :root {
+                ${themeVars}
+            }
             #ui-toggle {
                 position: absolute;
                 top: 8px;
                 right: 8px;
-                background: #b7b7a4;
-                color: #3d3d2d;
+                background: var(--ui-toggle-bg);
+                color: var(--ui-toggle-color);
                 border: none;
                 border-radius: 4px;
                 font-size: 20px;
@@ -114,7 +125,7 @@ export class UIManager {
                 visibility: visible;
             }
             #ui-toggle:hover {
-                background: #bc6c25;
+                background: var(--ui-toggle-hover);
             }
             #ui-panel.collapsed {
                 width: 48px !important;
@@ -133,8 +144,8 @@ export class UIManager {
                 top: 20px;
                 right: 20px;
                 width: 300px;
-                background: #f1faee;
-                border: 2px solid #1e3231;
+                background: var(--ui-bg);
+                border: 2px solid var(--ui-border);
                 border-radius: 10px;
                 padding: 15px;
                 font-family: Arial, sans-serif;
@@ -151,12 +162,12 @@ export class UIManager {
                 align-items: center;
                 margin-bottom: 20px;
                 padding-bottom: 10px;
-                border-bottom: 1px solid #6e9075;
+                border-bottom: 1px solid var(--ui-header-border);
                 flex-shrink: 0;
             }
             .ui-header h2 {
                 margin: 0;
-                color: #1e3231;
+                color: var(--ui-header-title);
                 font-size: 18px;
                 flex-grow: 1;
             }
@@ -168,37 +179,37 @@ export class UIManager {
                 overflow-x: hidden;
                 flex-grow: 1;
                 scrollbar-width: thin;
-                scrollbar-color: #6e9075 #e0e4e2;
+                scrollbar-color: var(--ui-scrollbar-thumb) var(--ui-scrollbar-track);
             }
             .ui-content::-webkit-scrollbar {
                 width: 8px;
             }
             .ui-content::-webkit-scrollbar-track {
-                background: #e0e4e2;
+                background: var(--ui-scrollbar-track);
                 border-radius: 4px;
             }
             .ui-content::-webkit-scrollbar-thumb {
-                background: #6e9075;
+                background: var(--ui-scrollbar-thumb);
                 border-radius: 4px;
             }
             .ui-content::-webkit-scrollbar-thumb:hover {
-                background: #5a735f;
+                background: var(--ui-scrollbar-thumb-hover);
             }
             .ui-section {
                 margin-bottom: 15px;
                 padding: 12px;
-                border: 1px solid #6e9075;
+                border: 1px solid var(--ui-section-border);
                 border-radius: 6px;
-                background: #e0e4e2;
+                background: var(--ui-section-bg);
             }
             .ui-section h4 {
                 margin: 0 0 10px 0;
-                color: #3d3d4c;
+                color: var(--ui-section-title);
             }
             .ui-label {
                 display: block;
-                background: #f8f8f3; /* OC-108 */
-                color: #3d5a6c; /* AF-565 text */
+                background: var(--ui-label-bg);
+                color: var(--ui-label-text);
                 font-weight: bold;
                 border-radius: 4px;
                 padding: 3px 8px;
@@ -207,14 +218,14 @@ export class UIManager {
                 text-align: left;
             }
             .ui-slider-label {
-                color: #3d5a6c;
+                color: var(--ui-label-text);
                 font-weight: bold;
                 font-size: 13px;
                 margin-bottom: 2px;
                 display: block;
             }
             .ui-slider-value {
-                color: #3d5a6c;
+                color: var(--ui-label-text);
                 font-weight: bold;
                 font-size: 15px;
                 margin-left: 8px;
@@ -225,87 +236,82 @@ export class UIManager {
             }
             input[type="range"] {
                 width: 70%;
-                accent-color: #bcb6c6; /* 2114-60 muted lavender */
-                background: #f8f8f3;
+                accent-color: var(--ui-slider-thumb);
+                background: var(--ui-label-bg);
                 border-radius: 4px;
                 height: 6px;
                 margin: 0 8px 0 0;
-                border: 1px solid #bfcad6;
+                border: 1px solid var(--ui-slider-track-border);
                 box-shadow: none;
             }
             input[type="range"]::-webkit-slider-thumb {
-                background: #bcb6c6;
+                background: var(--ui-slider-thumb);
                 border-radius: 50%;
                 width: 18px;
                 height: 18px;
-                border: 2px solid #3d5a6c;
+                border: 2px solid var(--ui-slider-thumb-border);
                 box-shadow: 0 1px 4px rgba(61,90,108,0.12);
             }
             input[type="range"]::-moz-range-thumb {
-                background: #bcb6c6;
+                background: var(--ui-slider-thumb);
                 border-radius: 50%;
-                border: 2px solid #3d5a6c;
+                border: 2px solid var(--ui-slider-thumb-border);
                 width: 18px;
                 height: 18px;
                 box-shadow: 0 1px 4px rgba(61,90,108,0.12);
             }
             input[type="range"]::-ms-thumb {
-                background: #bcb6c6;
+                background: var(--ui-slider-thumb);
                 border-radius: 50%;
-                border: 2px solid #3d5a6c;
+                border: 2px solid var(--ui-slider-thumb-border);
                 width: 18px;
                 height: 18px;
                 box-shadow: 0 1px 4px rgba(61,90,108,0.12);
             }
             input[type="range"]:focus {
                 outline: none;
-                box-shadow: 0 0 0 2px #bcb6c6;
+                box-shadow: 0 0 0 2px var(--ui-slider-focus);
             }
             input[type="range"]::-webkit-slider-runnable-track {
-                background: #e0e4e2;
+                background: var(--ui-slider-track);
                 height: 6px;
                 border-radius: 4px;
-                border: 1px solid #bfcad6;
+                border: 1px solid var(--ui-slider-track-border);
             }
             input[type="range"]::-ms-fill-lower {
-                background: #e0e4e2;
+                background: var(--ui-slider-track);
             }
             input[type="range"]::-ms-fill-upper {
-                background: #e0e4e2;
+                background: var(--ui-slider-track);
             }
             input[type="range"]::-moz-range-track {
-                background: #e0e4e2;
+                background: var(--ui-slider-track);
                 height: 6px;
                 border-radius: 4px;
-                border: 1px solid #bfcad6;
+                border: 1px solid var(--ui-slider-track-border);
             }
             input[type="range"]:disabled {
-                background: #dbe3e6;
+                background: var(--ui-slider-disabled);
             }
             .capacity-section {
-                background: #f1faee;
+                background: var(--ui-capacity-bg);
                 padding: 15px;
                 border-radius: 8px;
-                border: 2px solid #2d6a4f;
+                border: 2px solid var(--ui-capacity-border);
             }
             .capacity-display {
                 font-size: 24px;
                 font-weight: bold;
                 text-align: center;
-                color: #2d6a4f;
+                color: var(--ui-capacity-text);
                 margin: 10px 0;
             }
         `;
         document.head.appendChild(style);
     }
 
-    // All event bindings for input controls have been moved to InteractionManager.
-    // UIManager now only manages Info Panel display and updates.
 
-    updateLevelInputs() {
-        // No-op: Level input controls are now managed by InteractionManager
-        return;
-    }
+    // UIManager only manages Info Panel display and updates.
 
     updateStorageCapacity() {
         const totalCapacity = this.calculateStorageCapacity();
@@ -372,48 +378,11 @@ export class UIManager {
     setCameraView(view) {
         const camera = this.sceneManager.camera;
         const controls = this.sceneManager.controls;
-        
-        // Calculate warehouse dimensions based on current config
-        const totalRackDepth = this.uiConfig.storage_depth * 1.5; // locationDepth from constants
-        const rackAndAisleWidth = (totalRackDepth * 2) + 3; // aisleWidth from constants
-        const warehouseWidth = this.uiConfig.aisles * rackAndAisleWidth;
-        const warehouseLength = this.uiConfig.modules_per_aisle * 2; // moduleLength from constants
-        
-        const centerX = warehouseWidth / 2;
-        const centerZ = warehouseLength / 2;
-        
-        switch(view) {
-            case 'overview':
-                camera.position.set(centerX + 15, 15, centerZ + 20);
-                controls.target.set(centerX, 0, centerZ);
-                break;
-                
-            case 'front':
-                camera.position.set(centerX, 8, warehouseLength + 15);
-                controls.target.set(centerX, 0, centerZ);
-                break;
-                
-            case 'side':
-                camera.position.set(warehouseWidth + 15, 8, centerZ);
-                controls.target.set(centerX, 0, centerZ);
-                break;
-                
-            case 'top':
-                camera.position.set(centerX, 25, centerZ);
-                controls.target.set(centerX, 0, centerZ);
-                break;
-                
-            case 'aisle':
-                camera.position.set(rackAndAisleWidth/2, 3, centerZ + 10);
-                controls.target.set(rackAndAisleWidth/2, 0, centerZ);
-                break;
-        }
-        
+        const { position, target } = getCameraViewConfig(view, this.uiConfig);
+        camera.position.copy(new THREE.Vector3(position.x, position.y, position.z));
+        controls.target.copy(new THREE.Vector3(target.x, target.y, target.z));
         controls.update();
     }
 
-    updateUIFromConfig() {
-        // No-op: UI controls are now managed by InteractionManager
-        return;
-    }
+    // updateUIFromConfig is intentionally omitted; UI controls are managed by InteractionManager.
 }

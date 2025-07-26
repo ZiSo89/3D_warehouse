@@ -1,4 +1,6 @@
 
+
+import { getCameraViewConfig, syncLevelsPerAisle } from './uiUtils.js';
 import * as THREE from 'three';
 
 export class InteractionManager {
@@ -114,8 +116,9 @@ export class InteractionManager {
                         <input type="file" id="import-file-input" accept=".json" style="display: none;">
                     </div>
                 </div>
-                <div class="ui-section">
-                    <button id="rebuild-btn" class="rebuild-button">Rebuild Warehouse</button>
+                <div class="ui-section" style="display: flex; flex-direction: column; align-items: center;">
+                    <button id="rebuild-btn" class="rebuild-button" style="margin-bottom: 8px;">Rebuild Warehouse</button>
+                    <button id="reset-default-btn" class="reset-default-button">Reset to Default</button>
                 </div>
             </div>
             <div class="camera-buttons">
@@ -158,6 +161,23 @@ export class InteractionManager {
 
 
     bindInputPanelEvents(panel) {
+        // Reset to Default button
+        const resetDefaultBtn = panel.querySelector('#reset-default-btn');
+        resetDefaultBtn.addEventListener('click', () => {
+            // Default config (should match UIManager's default)
+            const defaultConfig = {
+                aisles: 3,
+                levels_per_aisle: [5, 6, 4],
+                modules_per_aisle: 8,
+                locations_per_module: 4,
+                storage_depth: 2,
+                picking_stations: 3,
+            };
+            this.uiManager.uiConfig = JSON.parse(JSON.stringify(defaultConfig));
+            this.updateInputPanelFromConfig(panel);
+            this.uiManager.updateStorageCapacity();
+            this.sceneManager.buildWarehouse(this.uiManager.uiConfig);
+        });
         // Range sliders
         const updateValue = (id, configKey) => {
             const slider = panel.querySelector(`#${id}`);
@@ -247,13 +267,8 @@ export class InteractionManager {
     updateLevelInputs(panel) {
         const aisleCount = this.uiManager.uiConfig.aisles;
         const container = panel.querySelector('#levels-container');
-        // Adjust the levels_per_aisle array
-        while (this.uiManager.uiConfig.levels_per_aisle.length < aisleCount) {
-            this.uiManager.uiConfig.levels_per_aisle.push(5);
-        }
-        while (this.uiManager.uiConfig.levels_per_aisle.length > aisleCount) {
-            this.uiManager.uiConfig.levels_per_aisle.pop();
-        }
+        // Adjust the levels_per_aisle array using utility
+        syncLevelsPerAisle(this.uiManager.uiConfig.levels_per_aisle, aisleCount);
         // Clear and rebuild level inputs
         container.innerHTML = '<h4>Levels per Aisle:</h4>';
         for (let i = 0; i < aisleCount; i++) {
@@ -556,43 +571,12 @@ export class InteractionManager {
     }
 
     setCameraPreset(presetName) {
-        // Calculate warehouse dimensions based on current config
         const cfg = this.uiManager.getConfig ? this.uiManager.getConfig() : this.uiManager.uiConfig;
-        const totalRackDepth = cfg.storage_depth * 1.5; // locationDepth from constants
-        const rackAndAisleWidth = (totalRackDepth * 2) + 3; // aisleWidth from constants
-        const warehouseWidth = cfg.aisles * rackAndAisleWidth;
-        const warehouseLength = cfg.modules_per_aisle * 2; // moduleLength from constants
-        const centerX = warehouseWidth / 2;
-        const centerZ = warehouseLength / 2;
-
-        let position, target;
-        switch (presetName) {
-            case 'overview':
-                position = new THREE.Vector3(centerX + 15, 15, centerZ + 20);
-                target = new THREE.Vector3(centerX, 0, centerZ);
-                break;
-            case 'topView':
-                position = new THREE.Vector3(centerX, 50, centerZ);
-                target = new THREE.Vector3(centerX, 0, centerZ);
-                break;
-            case 'sideView':
-                position = new THREE.Vector3(warehouseWidth + 15, 10, centerZ);
-                target = new THREE.Vector3(centerX, 0, centerZ);
-                break;
-            case 'prezoneView':
-                position = new THREE.Vector3(centerX, 12, -25);
-                target = new THREE.Vector3(centerX, 0, -8);
-                break;
-            case 'aisleView':
-                position = new THREE.Vector3(rackAndAisleWidth / 2, 8, centerZ + 10);
-                target = new THREE.Vector3(rackAndAisleWidth / 2, 0, centerZ);
-                break;
-            default:
-                // fallback to overview
-                position = new THREE.Vector3(centerX + 15, 15, centerZ + 20);
-                target = new THREE.Vector3(centerX, 0, centerZ);
-        }
-        this.animateCamera(position, target);
+        const { position, target } = getCameraViewConfig(presetName, cfg);
+        this.animateCamera(
+            new THREE.Vector3(position.x, position.y, position.z),
+            new THREE.Vector3(target.x, target.y, target.z)
+        );
     }
 
     animateCamera(targetPosition, targetLookAt, duration = 1000) {
