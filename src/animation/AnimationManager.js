@@ -1,8 +1,13 @@
+
 import * as THREE from 'three';
+import { UI_THEME } from '../ui/theme.js';
+
+// Optionally import RoundedBoxGeometry and texture loader if available
+// import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+// import brushedMetalUrl from '../assets/brushed_metal.jpg';
 
 export class AnimationManager {
     constructor(sceneManager, uiConfig) {
-        // ...existing code...
         this.sceneManager = sceneManager;
         this.scene = sceneManager.scene;
         this.warehouseGroup = sceneManager.warehouseGroup;
@@ -20,6 +25,14 @@ export class AnimationManager {
         this.shuttles = new Map();
         this.lifts = new Map();
         this.loadTween();
+
+        // Lighting for animation (ambient + directional)
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        this.directionalLight.position.set(10, 20, 10);
+        this.directionalLight.castShadow = true;
+        this.scene.add(this.ambientLight);
+        this.scene.add(this.directionalLight);
     }
 
     async loadTween() {
@@ -44,17 +57,40 @@ export class AnimationManager {
             this.scene.remove(this.animationContainer);
         }
 
-        const containerGeo = new THREE.BoxGeometry(0.5, 0.3, 0.8);
-        const containerMat = new THREE.MeshStandardMaterial({ 
-            color: 0x3b82f6,
-            metalness: 0.3,
-            roughness: 0.7
+        // Use RoundedBoxGeometry if available, fallback to BoxGeometry
+        let containerGeo;
+        if (THREE.RoundedBoxGeometry) {
+            containerGeo = new THREE.RoundedBoxGeometry(0.5, 0.3, 0.8, 4, 0.06);
+        } else {
+            containerGeo = new THREE.BoxGeometry(0.5, 0.3, 0.8);
+        }
+
+        // Optionally load brushed metal texture
+        let metalTexture = null;
+        if (THREE.TextureLoader) {
+            // You can provide a valid path to a brushed metal texture if available
+            // metalTexture = new THREE.TextureLoader().load(brushedMetalUrl);
+        }
+
+        const containerMat = new THREE.MeshPhysicalMaterial({
+            color: UI_THEME.header || 0x3b82f6,
+            metalness: 0.85,
+            roughness: 0.32,
+            clearcoat: 0.7,
+            clearcoatRoughness: 0.18,
+            reflectivity: 0.7,
+            transmission: 0.0,
+            ior: 1.45,
+            thickness: 0.1,
+            emissive: 0x0a0a1a,
+            emissiveIntensity: 0.18,
+            map: metalTexture || null
         });
-        
+
         this.animationContainer = new THREE.Mesh(containerGeo, containerMat);
         this.animationContainer.castShadow = true;
+        this.animationContainer.receiveShadow = true;
         this.scene.add(this.animationContainer);
-        
         return this.animationContainer;
     }
 
@@ -622,33 +658,44 @@ export class AnimationManager {
     }
 
     createShuttles(uiConfig, warehouseOffset) {
-        const rackAndAisleWidth = (uiConfig.storage_depth * 0.8 * 2) + 2.5; // constants calculation
-        
+        const rackAndAisleWidth = (uiConfig.storage_depth * 0.8 * 2) + 2.5;
         for (let a = 0; a < uiConfig.aisles; a++) {
             const levels = uiConfig.levels_per_aisle[a];
-            
-            // Create shuttle for EVERY level (removed the limit)
             for (let l = 0; l < levels; l++) {
                 const shuttleId = `${a}_${l}`;
-                
-                // Create shuttle mesh
-                const shuttleGeometry = new THREE.BoxGeometry(0.8, 0.3, 1.2);
-                const shuttleMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0xdc143c,
-                    metalness: 0.3,
-                    roughness: 0.7,
-                    emissive: 0x220000
+                // Use RoundedBoxGeometry if available
+                let shuttleGeometry;
+                if (THREE.RoundedBoxGeometry) {
+                    shuttleGeometry = new THREE.RoundedBoxGeometry(0.8, 0.3, 1.2, 4, 0.08);
+                } else {
+                    shuttleGeometry = new THREE.BoxGeometry(0.8, 0.3, 1.2);
+                }
+                // Optionally load brushed metal texture
+                let metalTexture = null;
+                if (THREE.TextureLoader) {
+                    // metalTexture = new THREE.TextureLoader().load(brushedMetalUrl);
+                }
+                const shuttleMaterial = new THREE.MeshPhysicalMaterial({
+                    color: UI_THEME.toggleHover || 0xdc143c,
+                    metalness: 0.92,
+                    roughness: 0.22,
+                    clearcoat: 0.7,
+                    clearcoatRoughness: 0.13,
+                    reflectivity: 0.7,
+                    transmission: 0.0,
+                    ior: 1.45,
+                    thickness: 0.1,
+                    emissive: 0x220000,
+                    emissiveIntensity: 0.22,
+                    map: metalTexture || null
                 });
-                
                 const shuttle = new THREE.Mesh(shuttleGeometry, shuttleMaterial);
                 shuttle.castShadow = true;
                 shuttle.receiveShadow = true;
-                
                 // Position shuttle in the aisle
                 const aisleX = a * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
-                const levelY = (l * 1.0) + (1.0 / 2); // Match rack level positioning: l * levelHeight + levelHeight/2
+                const levelY = (l * 1.0) + (1.0 / 2);
                 const shuttleZ = 5 + warehouseOffset.z;
-                
                 shuttle.position.set(aisleX, levelY, shuttleZ);
                 shuttle.userData = {
                     type: 'shuttle',
@@ -660,40 +707,50 @@ export class AnimationManager {
                     targetPosition: null,
                     speed: 2.0
                 };
-                
                 shuttle.name = `Shuttle_${a}_${l}`;
                 this.shuttleGroup.add(shuttle);
                 this.shuttles.set(shuttleId, shuttle);
-                
-                // console.log(`🚛 Created shuttle ${shuttleId} at level ${l + 1} (Y=${levelY.toFixed(2)}) position:`, shuttle.position);
             }
         }
     }
 
     createLifts(uiConfig, warehouseOffset) {
         const rackAndAisleWidth = (uiConfig.storage_depth * 0.8 * 2) + 2.5;
-        
         for (let a = 0; a < uiConfig.aisles; a++) {
             const liftId = `lift_${a}`;
-            
-            // Create lift mesh
-            const liftGeometry = new THREE.BoxGeometry(0.6, 1.8, 0.6);
-            const liftMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0xffd700,
-                metalness: 0.8,
-                roughness: 0.2,
-                emissive: 0x222200
+            // Use RoundedBoxGeometry if available
+            let liftGeometry;
+            if (THREE.RoundedBoxGeometry) {
+                liftGeometry = new THREE.RoundedBoxGeometry(0.6, 1.8, 0.6, 4, 0.08);
+            } else {
+                liftGeometry = new THREE.BoxGeometry(0.6, 1.8, 0.6);
+            }
+            // Optionally load brushed metal texture
+            let metalTexture = null;
+            if (THREE.TextureLoader) {
+                // metalTexture = new THREE.TextureLoader().load(brushedMetalUrl);
+            }
+            const liftMaterial = new THREE.MeshPhysicalMaterial({
+                color: UI_THEME.toggleBg || 0xffd700,
+                metalness: 0.95,
+                roughness: 0.18,
+                clearcoat: 0.8,
+                clearcoatRoughness: 0.12,
+                reflectivity: 0.8,
+                transmission: 0.0,
+                ior: 1.45,
+                thickness: 0.1,
+                emissive: 0x222200,
+                emissiveIntensity: 0.18,
+                map: metalTexture || null
             });
-            
             const lift = new THREE.Mesh(liftGeometry, liftMaterial);
             lift.castShadow = true;
             lift.receiveShadow = true;
-            
             // Position lift CLOSE TO PREZONE, before OSR (negative Z direction)
             const liftX = a * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25 + warehouseOffset.x;
             const liftY = 1.0;
-            const liftZ = 0.5 + warehouseOffset.z; // CLOSE to prezone, before OSR starts
-            
+            const liftZ = 0.5 + warehouseOffset.z;
             lift.position.set(liftX, liftY, liftZ);
             lift.userData = {
                 type: 'lift',
@@ -705,12 +762,9 @@ export class AnimationManager {
                 speed: 1.5,
                 currentLevel: 0
             };
-            
             lift.name = `Lift_${a}`;
             this.liftGroup.add(lift);
             this.lifts.set(liftId, lift);
-            
-            // console.log(`🏗️ Created lift ${liftId} at PREZONE position (Z=0.5):`, lift.position);
         }
     }
 

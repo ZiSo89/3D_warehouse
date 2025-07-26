@@ -8,8 +8,20 @@ export function createPrezone(uiConfig, constants) {
     // Create picking station and conveyor system for all lifts
     createPickingStation(prezoneGroup, uiConfig);
     createMultiLiftConveyorSystem(prezoneGroup, uiConfig, constants);
-    
-    
+
+    // Add ambient and directional lights for better depth and shadow
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.55); // Soft white
+    prezoneGroup.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+    dirLight.position.set(10, 20, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 1;
+    dirLight.shadow.camera.far = 100;
+    prezoneGroup.add(dirLight);
+
     return prezoneGroup;
 }
 
@@ -22,31 +34,55 @@ function createPickingStation(parent, uiConfig) {
     const totalPrezoneWidth = uiConfig.picking_stations * stationFullWidth;
     
     // Create multiple picking stations
+    // Optionally highlight special stations (buffer, reserved) with emissive color
+    const specialStations = (uiConfig.special_stations || []);
     for (let i = 0; i < uiConfig.picking_stations; i++) {
         // Calculate position using same formula as AnimationManager
-        // AnimationManager uses startStationIndex = 1, so we adjust accordingly
-        const adjustedIndex = i + 1; // Start from 1 instead of 0 to match AnimationManager
+        const adjustedIndex = i + 1;
         const pickingX = adjustedIndex * stationFullWidth - totalPrezoneWidth / 2 + stationWidth / 2;
         const pickingY = 0.25;
         const pickingZ = 0;
-        
+
+        // Determine if this station is special (buffer, reserved, etc.)
+        const special = specialStations.find(s => s.index === i);
+        let color = 0x6e9075; // default theme sectionBorder (green)
+        let emissive = 0x000000;
+        let emissiveIntensity = 0.0;
+        if (special) {
+            if (special.type === 'buffer') {
+                color = 0xbc6c25; // theme toggleHover (orange)
+                emissive = 0xbc6c25;
+                emissiveIntensity = 0.5;
+            } else if (special.type === 'reserved') {
+                color = 0x1976d2; // theme btn-hover (blue)
+                emissive = 0x1976d2;
+                emissiveIntensity = 0.5;
+            }
+        }
+
         const platformGeometry = new THREE.BoxGeometry(stationWidth, 0.5, 2);
-        const platformMaterial = new THREE.MeshLambertMaterial({ 
-            color: 0x4CAF50,  // Green
-            transparent: true, 
-            opacity: 0.8 
+        const platformMaterial = new THREE.MeshPhysicalMaterial({
+            color: color,
+            metalness: 0.4,
+            roughness: 0.35,
+            clearcoat: 0.5,
+            clearcoatRoughness: 0.18,
+            reflectivity: 0.5,
+            transparent: true,
+            opacity: 0.85,
+            emissive: emissive,
+            emissiveIntensity: emissiveIntensity
         });
         const platform = new THREE.Mesh(platformGeometry, platformMaterial);
         platform.position.set(pickingX, pickingY, pickingZ);
         platform.name = `PickingStation_${i}`;
-        platform.userData = { 
+        platform.userData = {
             type: 'picking_station',
             station_id: i,
-            coordinates: { x: pickingX, y: pickingY, z: pickingZ }
+            coordinates: { x: pickingX, y: pickingY, z: pickingZ },
+            special_type: special ? special.type : undefined
         };
-        
         parent.add(platform);
-        
     }
 }
 
@@ -198,12 +234,14 @@ function createSupportPillars(parent, liftX, startZ, endZ, lowerLevel, upperLeve
         if (pillarZ <= endZ) {
             const pillarHeight = upperLevel - lowerLevel;
             const pillarGeometry = new THREE.CylinderGeometry(0.05, 0.05, pillarHeight);
-            const pillarMaterial = new THREE.MeshLambertMaterial({ 
+            const pillarMaterial = new THREE.MeshPhysicalMaterial({
                 color: 0x666666, // Dark grey
-                // metalness: 0.7,
-                // roughness: 0.3
+                metalness: 0.8,
+                roughness: 0.25,
+                clearcoat: 0.5,
+                clearcoatRoughness: 0.15,
+                reflectivity: 0.7
             });
-            
             const pillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
             pillar.position.set(liftX, lowerLevel + pillarHeight/2, pillarZ);
             pillar.name = `SupportPillar_${liftX}_${pillarZ}`;
@@ -242,36 +280,38 @@ function createConveyorSegment(parent, startPoint, endPoint, segmentName, flowTy
         depth = length;
     }
     
-    // Color-code conveyors based on flow type
+    // Color-code conveyors based on flow type, using theme.js palette
     let color, opacity;
     switch(flowType) {
         case 'source':
-            color = 0x2196F3; // Blue for SOURCE (incoming materials)
-            opacity = 0.9;
+            color = 0x1976d2; // Accent blue (matches --ui-btn-hover)
+            opacity = 0.92;
             break;
         case 'target':
-            color = 0xFF9800; // Orange for TARGET (outgoing materials)
-            opacity = 0.9;
+            color = 0xbc6c25; // Secondary accent (matches --ui-toggle-hover)
+            opacity = 0.92;
             break;
         case 'main':
-            color = 0x4CAF50; // Green for main path
-            opacity = 0.8;
+            color = 0x6e9075; // theme sectionBorder (green)
+            opacity = 0.85;
             break;
         default:
-            color = 0x607D8B; // Grey for general
+            color = 0x3d5a6c; // theme labelText (blue-grey)
             opacity = 0.7;
     }
     
     // Create conveyor box with flow-specific appearance
     const conveyorGeometry = new THREE.BoxGeometry(width, height, depth);
-    const conveyorMaterial = new THREE.MeshLambertMaterial({
+    const conveyorMaterial = new THREE.MeshPhysicalMaterial({
         color: color,
+        metalness: 0.7,
+        roughness: 0.35,
+        clearcoat: 0.4,
+        clearcoatRoughness: 0.18,
+        reflectivity: 0.6,
         transparent: true,
-        opacity: opacity,
-        // metalness: 0.3,
-        // roughness: 0.7
+        opacity: opacity
     });
-    
     const conveyor = new THREE.Mesh(conveyorGeometry, conveyorMaterial);
     conveyor.position.set(centerX, centerY, centerZ);
     conveyor.name = `ConveyorSegment_${segmentName}`;

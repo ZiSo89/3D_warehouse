@@ -1,7 +1,20 @@
+
 import * as THREE from 'three';
 
 export function createRacks(uiConfig, constants, missingLocations = [], locationTypes = null) {
     const racksGroup = new THREE.Group();
+
+    // Add ambient and directional lights for better depth and shadow
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+    racksGroup.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(10, 20, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 1;
+    dirLight.shadow.camera.far = 100;
+    racksGroup.add(dirLight);
 
     // Helper function to check if a location should be missing
     const isLocationMissing = (aisle, level, module, depth, position) => {
@@ -58,31 +71,44 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
     const totalRackDepth = uiConfig.storage_depth * constants.locationDepth;
     const rackAndAisleWidth = (totalRackDepth * 2) + constants.aisleWidth;
 
-    const darkGreyMaterial = new THREE.MeshStandardMaterial({ 
+    // Use MeshPhysicalMaterial for more realistic metal appearance
+    const darkGreyMaterial = new THREE.MeshPhysicalMaterial({
         color: 0x1e3231, // Dark green-grey from palette
-        metalness: 0.3,
-        roughness: 0.7,
+        metalness: 0.7,
+        roughness: 0.5,
+        clearcoat: 0.4,
+        clearcoatRoughness: 0.25,
+        reflectivity: 0.7,
+        envMapIntensity: 0.7
+    });
+    const lightGreyMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x6e9075, // Medium green from palette
+        metalness: 0.5,
+        roughness: 0.4,
+        clearcoat: 0.3,
+        clearcoatRoughness: 0.3,
+        reflectivity: 0.5,
         envMapIntensity: 0.5
     });
-    const lightGreyMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x6e9075, // Medium green from palette
-        metalness: 0.2,
-        roughness: 0.6,
-        envMapIntensity: 0.4
-    });
-    
+
     // Enhanced frame materials with better metallic appearance
-    const steelFrameMaterial = new THREE.MeshStandardMaterial({
+    const steelFrameMaterial = new THREE.MeshPhysicalMaterial({
         color: 0x1e3231, // Dark base color
-        metalness: 0.8,
-        roughness: 0.3,
+        metalness: 1.0,
+        roughness: 0.25,
+        clearcoat: 0.6,
+        clearcoatRoughness: 0.18,
+        reflectivity: 0.8,
         envMapIntensity: 1.0
     });
-    
-    const aluminumFrameMaterial = new THREE.MeshStandardMaterial({
+
+    const aluminumFrameMaterial = new THREE.MeshPhysicalMaterial({
         color: 0xe5d1d0, // Light peachy color from palette
-        metalness: 0.9,
-        roughness: 0.1,
+        metalness: 1.0,
+        roughness: 0.08,
+        clearcoat: 0.7,
+        clearcoatRoughness: 0.12,
+        reflectivity: 0.95,
         envMapIntensity: 1.2
     });
 
@@ -194,23 +220,33 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                                 // Add more custom types/colors as needed
                             };
 
-                            let locationMaterial;
-                            if (typeColorMap[locationType]) {
-                                locationMaterial = new THREE.MeshStandardMaterial({
-                                    color: typeColorMap[locationType],
-                                    metalness: 0.4,
-                                    roughness: 0.5,
-                                    emissive: 0x331a00,
-                                    emissiveIntensity: 0.1
-                                });
+
+                            // Use MeshPhysicalMaterial, theme-based colors, and emissive for special types
+                            let color, emissive = 0x000000, emissiveIntensity = 0.0;
+                            if (locationType === 'Buffer') {
+                                color = 0xbc6c25; // theme toggleHover (orange)
+                                emissive = 0xbc6c25;
+                                emissiveIntensity = 0.45;
+                            } else if (locationType === 'Sakis') {
+                                color = 0x1976d2; // theme btn-hover (blue)
+                                emissive = 0x1976d2;
+                                emissiveIntensity = 0.45;
+                            } else if (locationType === 'Nothing') {
+                                color = 0x888888; // grey
                             } else {
-                                // Regular storage locations - existing color scheme
-                                locationMaterial = new THREE.MeshStandardMaterial({
-                                    color: (d % 2 === 0) ? 0x6e9075 : 0x9ca3af, // Green and muted grey (was cream)
-                                    metalness: 0.3,
-                                    roughness: 0.7
-                                });
+                                color = (d % 2 === 0) ? 0x6e9075 : 0x9ca3af; // theme green or muted grey
                             }
+                            let locationMaterial = new THREE.MeshPhysicalMaterial({
+                                color: color,
+                                metalness: 0.5,
+                                roughness: 0.45,
+                                clearcoat: 0.3,
+                                clearcoatRoughness: 0.18,
+                                reflectivity: 0.5,
+                                transparent: false,
+                                emissive: emissive,
+                                emissiveIntensity: emissiveIntensity
+                            });
 
                             const locationGeometry = new THREE.BoxGeometry(
                                 constants.locationDepth * 0.8, 
