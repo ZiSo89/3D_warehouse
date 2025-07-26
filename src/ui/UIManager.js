@@ -102,6 +102,7 @@ export class UIManager {
                 <div class="ui-section capacity-section">
                     <h4>Storage Capacity:</h4>
                     <div id="storage-capacity" class="capacity-display">0</div>
+                    <div id="missing-locations" class="capacity-missing" style="font-size:15px;color:#c33;margin-top:4px;">Missing: 0</div>
                     <small>Total storage locations</small>
                 </div>
                 <div class="ui-section" id="info-logs">
@@ -357,7 +358,28 @@ export class UIManager {
      */
     updateStorageCapacity() {
         const totalCapacity = this.calculateStorageCapacity();
+        // Calculate theoretical max locations (all possible, no missing)
+        let maxLocations = 0;
+        for (let a = 0; a < this.uiConfig.aisles; a++) {
+            const levels = this.uiConfig.levels_per_aisle[a];
+            for (let l = 0; l < levels; l++) {
+                for (let m = 0; m < this.uiConfig.modules_per_aisle; m++) {
+                    for (let d = 0; d < this.uiConfig.storage_depth; d++) {
+                        for (let s = 0; s < this.uiConfig.locations_per_module; s++) {
+                            for (let side = 0; side < 2; side++) {
+                                maxLocations++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        const missingLocations = maxLocations - totalCapacity;
         document.getElementById('storage-capacity').textContent = totalCapacity.toLocaleString();
+        const missingDiv = document.getElementById('missing-locations');
+        if (missingDiv) {
+            missingDiv.textContent = `Missing: ${missingLocations.toLocaleString()}`;
+        }
     }
 
     /**
