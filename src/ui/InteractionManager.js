@@ -286,10 +286,26 @@ export class InteractionManager {
             if (file) {
                 this.showLoadingOverlay();
                 this.sceneManager.importWarehouseConfiguration(file, (uiConfig, warehouseConfig) => {
-                    this.uiManager.uiConfig = uiConfig;
+                    // Always use the imported config for the 3D model
+                    this.sceneManager.modelConfig = { ...uiConfig };
+
+                    // Clamp values for UI only (sliders etc.)
+                    const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+                    const uiClampedConfig = {
+                        aisles: clamp(uiConfig.aisles, 1, 4),
+                        levels_per_aisle: Array.isArray(uiConfig.levels_per_aisle)
+                            ? uiConfig.levels_per_aisle.map(lv => clamp(lv, 2, 12)).slice(0, 4)
+                            : [2, 2, 2, 2],
+                        modules_per_aisle: clamp(uiConfig.modules_per_aisle, 3, 8),
+                        locations_per_module: clamp(uiConfig.locations_per_module, 2, 4),
+                        storage_depth: clamp(uiConfig.storage_depth, 1, 3),
+                        picking_stations: clamp(uiConfig.picking_stations, 1, 4),
+                    };
+                    this.uiManager.uiConfig = uiClampedConfig;
                     this.updateInputPanelFromConfig(panel);
                     this.uiManager.updateStorageCapacity();
-                    this.sceneManager.buildWarehouse(this.uiManager.uiConfig);
+                    // Build the warehouse with the full imported config (not clamped)
+                    this.sceneManager.buildWarehouse(uiConfig);
                     setTimeout(() => {
                         this.hideLoadingOverlay();
                     }, 400);

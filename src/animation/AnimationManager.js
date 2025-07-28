@@ -675,8 +675,10 @@ export class AnimationManager {
                 if (THREE.TextureLoader) {
                     // metalTexture = new THREE.TextureLoader().load(brushedMetalUrl);
                 }
+                // Use a lighter color from UI_THEME for the shuttle
+                const lightShuttleColor = UI_THEME.toggleBg || '#b7b7a4';
                 const shuttleMaterial = new THREE.MeshPhysicalMaterial({
-                    color: UI_THEME.toggleHover || 0xdc143c,
+                    color: lightShuttleColor,
                     metalness: 0.92,
                     roughness: 0.22,
                     clearcoat: 0.7,

@@ -210,48 +210,45 @@ export class SceneManager {
     animate() {
         requestAnimationFrame(this.animate.bind(this));
         this.controls.update();
-        
+
         // Update TWEEN animations if available
         if (typeof TWEEN !== 'undefined') {
             TWEEN.update();
         }
-        
+
+        // --- Virtualization: Frustum culling για racks ---
+        // Εφαρμόζεται μόνο σε Meshes για αποφυγή σφαλμάτων
+        if (this.warehouseGroup && this.warehouseGroup.children.length > 0) {
+            const frustum = new THREE.Frustum();
+            const cameraViewProjectionMatrix = new THREE.Matrix4();
+            this.camera.updateMatrixWorld();
+            this.camera.updateProjectionMatrix();
+            cameraViewProjectionMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+            frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
+            this.warehouseGroup.children.forEach(child => {
+                if (child.isMesh && child.geometry && child.geometry.boundingSphere) {
+                    child.visible = frustum.intersectsObject(child);
+                } else {
+                    child.visible = true; // Π.χ. Groups, Sprites, κλπ
+                }
+            });
+        }
+
         this.renderer.render(this.scene, this.camera);
     }
 
     setupLighting() {
-        // Optimized ambient light for better performance
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.7);
+        // Απλός φωτισμός για μέγιστη απόδοση
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
         this.scene.add(ambientLight);
 
-        // Main directional light with optimized shadow settings
-        const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        // Ένα directional light χωρίς σκιές
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
         mainLight.position.set(30, 40, 30);
-        mainLight.castShadow = true;
-        mainLight.shadow.mapSize.width = 2048;  // Reduced from 4096
-        mainLight.shadow.mapSize.height = 2048; // Reduced from 4096
-        mainLight.shadow.camera.near = 0.5;
-        mainLight.shadow.camera.far = 100;
-        mainLight.shadow.camera.left = -60;
-        mainLight.shadow.camera.right = 60;
-        mainLight.shadow.camera.top = 60;
-        mainLight.shadow.camera.bottom = -60;
-        mainLight.shadow.bias = -0.0001;
+        mainLight.castShadow = false; // No shadows for performance
         this.scene.add(mainLight);
 
-        // Simplified secondary light (no shadows for performance)
-        const fillLight = new THREE.DirectionalLight(0xfff8dc, 0.5);
-        fillLight.position.set(-25, 35, -25);
-        fillLight.castShadow = false; // Disabled for performance
-        this.scene.add(fillLight);
-
-        // Reduced number of point lights
-        const pointLight1 = new THREE.PointLight(0xffffff, 0.8, 30, 2);
-        pointLight1.position.set(15, 20, 15);
-        pointLight1.castShadow = false; // Disabled for performance
-        this.scene.add(pointLight1);
-
-        // Ground plane for shadows
+        // Ground plane χωρίς σκιές
         this.createGroundPlane();
     }
 
@@ -456,9 +453,7 @@ export class SceneManager {
     validateWarehouseConfiguration(config) {
         // Check required structure
         if (!config.warehouse_parameters) return false;
-        
         const params = config.warehouse_parameters;
-        
         // Validate required parameters
         const requiredParams = ['aisles', 'levels_per_aisle', 'modules_per_aisle', 'locations_per_module', 'storage_depth', 'picking_stations'];
         for (const param of requiredParams) {
@@ -467,21 +462,8 @@ export class SceneManager {
                 return false;
             }
         }
-
-        // Validate ranges
-        if (params.aisles < 1 || params.aisles > 8) return false;
-        if (params.modules_per_aisle < 3 || params.modules_per_aisle > 15) return false;
-        if (params.locations_per_module < 2 || params.locations_per_module > 8) return false;
-        if (params.storage_depth < 1 || params.storage_depth > 6) return false;
-        if (params.picking_stations < 1 || params.picking_stations > 8) return false;
-        
-        // Validate levels_per_aisle array
+        // Validate levels_per_aisle array only for type and length
         if (!Array.isArray(params.levels_per_aisle) || params.levels_per_aisle.length !== params.aisles) return false;
-        
-        for (const levels of params.levels_per_aisle) {
-            if (levels < 2 || levels > 12) return false;
-        }
-
         return true;
     }
 
