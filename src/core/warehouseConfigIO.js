@@ -1,0 +1,97 @@
+// Warehouse configuration export/import helpers for SceneManager modularization
+
+/**
+ * Exports the warehouse configuration as a JSON file and returns the config object.
+ * @param {Object} uiConfig - The current UI configuration.
+ * @param {Array} missingLocations - Array of missing locations.
+ * @param {Object} locationTypes - Location types object.
+ * @param {Function} calculateTotalLocations - Function to calculate total locations.
+ * @param {string} [filename='warehouse_config.json'] - The filename for export.
+ * @returns {Object} The warehouse configuration object.
+ */
+export function exportWarehouseConfiguration(uiConfig, missingLocations, locationTypes, calculateTotalLocations, filename = 'warehouse_config.json') {
+    const warehouseConfig = {
+        metadata: {
+            name: filename.replace('.json', ''),
+            created: new Date().toISOString(),
+            version: '1.0.0',
+            description: 'Exported warehouse configuration'
+        },
+        warehouse_parameters: {
+            aisles: uiConfig.aisles,
+            levels_per_aisle: [...uiConfig.levels_per_aisle],
+            modules_per_aisle: uiConfig.modules_per_aisle,
+            locations_per_module: uiConfig.locations_per_module,
+            storage_depth: uiConfig.storage_depth,
+            picking_stations: uiConfig.picking_stations
+        },
+        missing_locations: [...missingLocations],
+        location_types: {
+            buffer_locations: [...locationTypes.buffer_locations],
+            default_type: locationTypes.default_type
+        },
+        calculated_metrics: {
+            total_locations: calculateTotalLocations(uiConfig),
+            total_modules: uiConfig.aisles * uiConfig.modules_per_aisle,
+            total_levels: uiConfig.levels_per_aisle.reduce((sum, levels) => sum + levels, 0)
+        }
+    };
+
+    const jsonString = JSON.stringify(warehouseConfig, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const downloadLink = document.createElement('a');
+    downloadLink.href = url;
+    downloadLink.download = filename;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(url);
+
+    return warehouseConfig;
+}
+
+/**
+ * Imports a warehouse configuration from a JSON file and applies it via callback.
+ * @param {File} jsonFile - The JSON file to import.
+ * @param {Function} validateWarehouseConfiguration - Function to validate config structure.
+ * @param {Function} callback - Callback to apply the imported config.
+ */
+export function importWarehouseConfiguration(jsonFile, validateWarehouseConfiguration, callback) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const warehouseConfig = JSON.parse(event.target.result);
+            if (!validateWarehouseConfiguration(warehouseConfig)) {
+                throw new Error('Invalid warehouse configuration format');
+            }
+            if (callback) {
+                callback(warehouseConfig);
+            }
+        } catch (error) {
+            console.error('❌ Error importing warehouse configuration:', error);
+            alert(`Error importing configuration: ${error.message}`);
+        }
+    };
+    reader.readAsText(jsonFile);
+}
+
+/**
+ * Validates the structure of a warehouse configuration object.
+ * @param {Object} config - The configuration object to validate.
+ * @returns {boolean} True if valid, false otherwise.
+ */
+export function validateWarehouseConfiguration(config) {
+    if (!config.warehouse_parameters) return false;
+    const params = config.warehouse_parameters;
+    const requiredParams = ['aisles', 'levels_per_aisle', 'modules_per_aisle', 'locations_per_module', 'storage_depth', 'picking_stations'];
+    for (const param of requiredParams) {
+        if (!(param in params)) {
+            console.error(`Missing required parameter: ${param}`);
+            return false;
+        }
+    }
+    if (!Array.isArray(params.levels_per_aisle) || params.levels_per_aisle.length !== params.aisles) return false;
+    return true;
+}

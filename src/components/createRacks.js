@@ -1,5 +1,7 @@
 
+
 import * as THREE from 'three';
+import { getLocationTypeColor } from '../ui/theme.js';
 
 export function createRacks(uiConfig, constants, missingLocations = [], locationTypes = null) {
     const racksGroup = new THREE.Group();
@@ -212,30 +214,8 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                             // Get location type to determine material
                             const locationType = getLocationType(a, l, m, d, s);
 
-                            // Color map for custom types
-                            const typeColorMap = {
-                                'Buffer': 0xff8500, // Bright orange
-                                'Sakis': 0x00bfff,  // DeepSkyBlue
-                                'Nothing': 0x888888 // Grey
-                                // Add more custom types/colors as needed
-                            };
-
-
-                            // Use MeshPhysicalMaterial, theme-based colors, and emissive for special types
-                            let color, emissive = 0x000000, emissiveIntensity = 0.0;
-                            if (locationType === 'Buffer') {
-                                color = 0xbc6c25; // theme toggleHover (orange)
-                                emissive = 0xbc6c25;
-                                emissiveIntensity = 0.45;
-                            } else if (locationType === 'Sakis') {
-                                color = 0x1976d2; // theme btn-hover (blue)
-                                emissive = 0x1976d2;
-                                emissiveIntensity = 0.45;
-                            } else if (locationType === 'Nothing') {
-                                color = 0x888888; // grey
-                            } else {
-                                color = (d % 2 === 0) ? 0x6e9075 : 0x9ca3af; // theme green or muted grey
-                            }
+                            // Use theme-based color logic from theme.js
+                            const { color, emissive, emissiveIntensity } = getLocationTypeColor(locationType, d);
                             let locationMaterial = new THREE.MeshPhysicalMaterial({
                                 color: color,
                                 metalness: 0.5,

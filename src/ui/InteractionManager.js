@@ -1,13 +1,16 @@
-
-
 /**
  * InteractionManager handles user interaction with the 3D scene and the control panel UI.
  * @class InteractionManager
  * @param {SceneManager} sceneManager - The main scene manager instance.
  * @param {UIManager} uiManager - The UI manager instance.
  */
+
 import { getCameraViewConfig, syncLevelsPerAisle } from './uiUtils.js';
 import * as THREE from 'three';
+import { createInteractionPanel, updatePanelText } from './interactionPanel.js';
+import { bindCameraEvents, setCameraPreset, animateCamera } from './cameraControls.js';
+import { getSelectableObjects, filterSelectedObject } from './objectSelectionUtils.js';
+import { exportWarehouseConfiguration, importWarehouseConfiguration, validateWarehouseConfiguration } from '../core/warehouseConfigIO.js';
 
 export class InteractionManager {
     /**
@@ -56,8 +59,21 @@ export class InteractionManager {
         // Keyboard events
         document.addEventListener('keydown', this.onKeyDown.bind(this));
 
-        // Create interaction UI
-        this.createInteractionUI();
+        // Modularized UI panel
+        const panel = createInteractionPanel(this.uiManager.uiConfig);
+        updatePanelText(panel);
+        this.bindCameraEvents();
+        this.bindInputPanelEvents(panel);
+        // Fix: Add toggle logic for the panel after creation
+        const toggleBtn = panel.querySelector('#interaction-toggle');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const isCollapsed = panel.classList.toggle('collapsed');
+                toggleBtn.setAttribute('aria-label', isCollapsed ? 'Show Panel' : 'Hide Panel');
+                toggleBtn.setAttribute('title', isCollapsed ? 'Show Controls' : 'Hide Controls');
+                toggleBtn.textContent = '☰';
+            });
+        }
     }
 
     /**
@@ -74,119 +90,7 @@ export class InteractionManager {
         };
     }
 
-    /**
-     * Creates the main interaction panel UI and binds events.
-     */
-    createInteractionUI() {
-        // Prevent duplicate panel creation
-        if (document.getElementById('interaction-panel')) {
-            return;
-        }
-        // Add loading overlay to body (hidden by default)
-        if (!document.getElementById('loading-overlay')) {
-            const loadingOverlay = document.createElement('div');
-            loadingOverlay.id = 'loading-overlay';
-            loadingOverlay.innerHTML = `
-                <div class="loading-spinner"></div>
-            `;
-            loadingOverlay.style.display = 'none';
-            document.body.appendChild(loadingOverlay);
-        }
-        const interactionPanel = document.createElement('div');
-        interactionPanel.id = 'interaction-panel';
-        interactionPanel.innerHTML = `
-            <div class="toggle-sticky-wrapper">
-                <button id="interaction-toggle" aria-label="Hide Panel" title="Hide Controls" style="background:#b7b7a4;color:#3d3d2d;border:none;border-radius:4px;font-size:20px;width:36px;height:36px;cursor:pointer;z-index:2000;transition:background 0.3s;display:block;visibility:visible;">☰</button>
-            </div>
-            <div class="interaction-header">
-                <h3>Settings & Actions</h3>
-            </div>
-            <div class="input-section">
-                <div class="ui-section">
-                    <label for="aisles">Aisles:</label>
-                    <input type="range" id="aisles" min="1" max="4" value="${this.uiManager.uiConfig.aisles}">
-                    <span id="aisles-value">${this.uiManager.uiConfig.aisles}</span>
-                </div>
-                <div class="ui-section" id="levels-container">
-                    <h4>Levels per Aisle:</h4>
-                    <!-- Dynamic level inputs will be added here -->
-                </div>
-                <div class="ui-section">
-                    <label for="modules">Modules per Aisle:</label>
-                    <input type="range" id="modules" min="3" max="8" value="${this.uiManager.uiConfig.modules_per_aisle}">
-                    <span id="modules-value">${this.uiManager.uiConfig.modules_per_aisle}</span>
-                </div>
-                <div class="ui-section">
-                    <label for="locations">Locations per Module:</label>
-                    <input type="range" id="locations" min="2" max="4" value="${this.uiManager.uiConfig.locations_per_module}">
-                    <span id="locations-value">${this.uiManager.uiConfig.locations_per_module}</span>
-                </div>
-                <div class="ui-section">
-                    <label for="depth">Storage Depth:</label>
-                    <input type="range" id="depth" min="1" max="3" value="${this.uiManager.uiConfig.storage_depth}">
-                    <span id="depth-value">${this.uiManager.uiConfig.storage_depth}</span>
-                </div>
-                <div class="ui-section">
-                    <label for="stations">Picking Stations:</label>
-                    <input type="range" id="stations" min="1" max="4" value="${this.uiManager.uiConfig.picking_stations}">
-                    <span id="stations-value">${this.uiManager.uiConfig.picking_stations}</span>
-                </div>
-                <div class="ui-section animation-section">
-                    <h4>Container Animation:</h4>
-                    <div class="animation-controls">
-                        <button id="toggle-animation-btn" class="animation-btn">Start Animation</button>
-                    </div>
-                </div>
-                <div class="ui-section configuration-section">
-                    <h4>Configuration:</h4>
-                    <div class="config-controls">
-                        <button id="export-config-btn" class="config-btn export-btn">📤 Export JSON</button>
-                        <button id="import-config-btn" class="config-btn import-btn">📥 Import JSON</button>
-                        <input type="file" id="import-file-input" accept=".json" style="display: none;">
-                    </div>
-                </div>
-                <div class="ui-section" style="display: flex; flex-direction: column; align-items: center;">
-                    <button id="rebuild-btn" class="rebuild-button" style="margin-bottom: 8px;">Rebuild Warehouse</button>
-                    <button id="reset-default-btn" class="reset-default-button">Reset to Default</button>
-                </div>
-            </div>
-            <div class="camera-buttons">
-                <button class="camera-btn" data-preset="overview">📊 Overview</button>
-                <button class="camera-btn" data-preset="topView">⬆️ Top View</button>
-                <button class="camera-btn" data-preset="sideView">↔️ Side View</button>
-                <button class="camera-btn" data-preset="prezoneView">📦 Prezone</button>
-            </div>
-            <div class="object-info" id="object-info" style="display: none;">
-                <h4>Selected Object:</h4>
-                <div id="object-details"></div>
-            </div>
-        `;
-        document.body.appendChild(interactionPanel);
-        this.bindCameraEvents();
-        this.bindInputPanelEvents(interactionPanel);
-        // Toggle logic (single instance)
-        const toggleBtn = interactionPanel.querySelector('#interaction-toggle');
-        toggleBtn.addEventListener('click', () => {
-            const isCollapsed = interactionPanel.classList.toggle('collapsed');
-            toggleBtn.setAttribute('aria-label', isCollapsed ? 'Show Panel' : 'Hide Panel');
-            toggleBtn.setAttribute('title', isCollapsed ? 'Show Controls' : 'Hide Controls');
-            toggleBtn.textContent = '☰';
-        });
-
-        // Update all UI text to English
-        interactionPanel.querySelector('.interaction-header h3').textContent = 'Settings & Actions';
-        interactionPanel.querySelector('label[for="aisles"]').textContent = 'Aisles:';
-        interactionPanel.querySelector('label[for="modules"]').textContent = 'Modules per Aisle:';
-        interactionPanel.querySelector('label[for="locations"]').textContent = 'Locations per Module:';
-        interactionPanel.querySelector('label[for="depth"]').textContent = 'Storage Depth:';
-        interactionPanel.querySelector('label[for="stations"]').textContent = 'Picking Stations:';
-        interactionPanel.querySelector('.animation-section h4').textContent = 'Container Animation:';
-        interactionPanel.querySelector('.configuration-section h4').textContent = 'Configuration:';
-        interactionPanel.querySelector('#rebuild-btn').textContent = 'Rebuild Warehouse';
-        interactionPanel.querySelector('#export-config-btn').textContent = '📤 Export JSON';
-        interactionPanel.querySelector('#import-config-btn').textContent = '📥 Import JSON';
-        interactionPanel.querySelector('#levels-container h4').textContent = 'Levels per Aisle:';
-    }
+    // ...moved to interactionPanel.js...
 
 
     /**
@@ -275,7 +179,13 @@ export class InteractionManager {
         panel.querySelector('#export-config-btn').addEventListener('click', () => {
             const filename = prompt('Enter filename for export:', 'warehouse_config.json');
             if (filename) {
-                this.sceneManager.exportWarehouseConfiguration(this.uiManager.uiConfig, filename);
+                exportWarehouseConfiguration(
+                    this.uiManager.uiConfig,
+                    this.sceneManager.missingLocations,
+                    this.sceneManager.locationTypes,
+                    this.sceneManager.calculateTotalLocations.bind(this.sceneManager),
+                    filename
+                );
             }
         });
         panel.querySelector('#import-config-btn').addEventListener('click', () => {
@@ -285,32 +195,41 @@ export class InteractionManager {
             const file = event.target.files[0];
             if (file) {
                 this.showLoadingOverlay();
-                this.sceneManager.importWarehouseConfiguration(file, (uiConfig, warehouseConfig) => {
-                    // Always use the imported config for the 3D model
-                    this.sceneManager.modelConfig = { ...uiConfig };
-
-                    // Clamp values for UI only (sliders etc.)
-                    const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
-                    const uiClampedConfig = {
-                        aisles: clamp(uiConfig.aisles, 1, 4),
-                        levels_per_aisle: Array.isArray(uiConfig.levels_per_aisle)
-                            ? uiConfig.levels_per_aisle.map(lv => clamp(lv, 2, 12)).slice(0, 4)
-                            : [2, 2, 2, 2],
-                        modules_per_aisle: clamp(uiConfig.modules_per_aisle, 3, 8),
-                        locations_per_module: clamp(uiConfig.locations_per_module, 2, 4),
-                        storage_depth: clamp(uiConfig.storage_depth, 1, 3),
-                        picking_stations: clamp(uiConfig.picking_stations, 1, 4),
-                    };
-                    this.uiManager.uiConfig = uiClampedConfig;
-                    this.updateInputPanelFromConfig(panel);
-                    this.uiManager.updateStorageCapacity();
-                    // Build the warehouse with the full imported config (not clamped)
-                    this.sceneManager.buildWarehouse(uiConfig);
-                    setTimeout(() => {
-                        this.hideLoadingOverlay();
-                    }, 400);
-                });
-                event.target.value = '';
+                importWarehouseConfiguration(
+                    file,
+                    validateWarehouseConfiguration,
+                    (warehouseConfig) => {
+                        // Apply the configuration
+                        const uiConfig = warehouseConfig.warehouse_parameters;
+                        this.sceneManager.missingLocations = warehouseConfig.missing_locations || [];
+                        this.sceneManager.locationTypes = warehouseConfig.location_types || {
+                            buffer_locations: [],
+                            default_type: 'Storage'
+                        };
+                        // Always use the imported config for the 3D model
+                        this.sceneManager.modelConfig = { ...uiConfig };
+                        // Clamp values for UI only (sliders etc.)
+                        const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+                        const uiClampedConfig = {
+                            aisles: clamp(uiConfig.aisles, 1, 4),
+                            levels_per_aisle: Array.isArray(uiConfig.levels_per_aisle)
+                                ? uiConfig.levels_per_aisle.map(lv => clamp(lv, 2, 12)).slice(0, 4)
+                                : [2, 2, 2, 2],
+                            modules_per_aisle: clamp(uiConfig.modules_per_aisle, 3, 8),
+                            locations_per_module: clamp(uiConfig.locations_per_module, 2, 4),
+                            storage_depth: clamp(uiConfig.storage_depth, 1, 3),
+                            picking_stations: clamp(uiConfig.picking_stations, 1, 4),
+                        };
+                        this.uiManager.uiConfig = uiClampedConfig;
+                        this.updateInputPanelFromConfig(panel);
+                        this.uiManager.updateStorageCapacity();
+                        // Build the warehouse with the full imported config (not clamped)
+                        this.sceneManager.buildWarehouse(uiConfig);
+                        setTimeout(() => {
+                            this.hideLoadingOverlay();
+                        }, 400);
+                    }
+                );
             }
         });
         // Rebuild button
@@ -408,79 +327,10 @@ export class InteractionManager {
     onMouseClick(event) {
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
         this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
-
-        // Collect all objects to check for intersections
-        const objectsToCheck = [];
-        if (this.sceneManager.warehouseGroup) {
-            objectsToCheck.push(...this.sceneManager.warehouseGroup.children);
-        }
-        if (this.sceneManager.animationManager) {
-            if (this.sceneManager.animationManager.shuttleGroup) {
-                objectsToCheck.push(...this.sceneManager.animationManager.shuttleGroup.children);
-            }
-            if (this.sceneManager.animationManager.liftGroup) {
-                objectsToCheck.push(...this.sceneManager.animationManager.liftGroup.children);
-            }
-        }
-
+        const objectsToCheck = getSelectableObjects(this.sceneManager);
         const intersects = this.raycaster.intersectObjects(objectsToCheck, true);
-
-        let selectedObject = null;
-        // 1. Prioritize shuttles/lifts
-        for (let intersection of intersects) {
-            const obj = intersection.object;
-            if (obj.userData && (obj.userData.type === 'lift' || obj.userData.type === 'shuttle')) {
-                selectedObject = obj;
-                break;
-            }
-        }
-        // 2. If not found, look for storage locations and other components
-        if (!selectedObject) {
-            for (let intersection of intersects) {
-                const obj = intersection.object;
-                // Exclude conveyors, picking stations, and rack module frames
-                if (
-                    (obj.userData && (obj.userData.type === 'conveyor' || obj.userData.type === 'picking_station')) ||
-                    (obj.name && (obj.name.startsWith('SOURCE_') || obj.name.startsWith('TARGET_') || obj.name.startsWith('PREZONE_')))
-                ) {
-                    continue;
-                }
-                if (obj.material && obj.material.color) {
-                    const colorHex = obj.material.color.getHex();
-                    if (
-                        colorHex === 0x2196F3 || // SOURCE (blue)
-                        colorHex === 0xFF9800 || // TARGET (orange)
-                        colorHex === 0x666666 || // Support pillar (grey)
-                        colorHex === 0x2c2c2c || colorHex === 0x404040 || (colorHex >= 0x1a1a1a && colorHex <= 0x404040) // Prezone (dark grey)
-                    ) {
-                        continue;
-                    }
-                    if (
-                        colorHex === 0x4CAF50 || // Picking station (green)
-                        colorHex === 0x8b4513 || (colorHex >= 0x800000 && colorHex <= 0x8b7355) // Picking station (brown range)
-                    ) {
-                        continue;
-                    }
-                }
-                // Exclude rack module frames by geometry
-                if (obj.geometry) {
-                    const box = new THREE.Box3().setFromObject(obj);
-                    const size = box.getSize(new THREE.Vector3());
-                    if (size.x <= 0.15 || size.y <= 0.15 || size.z <= 0.15) {
-                        continue;
-                    }
-                }
-                selectedObject = obj;
-                break;
-            }
-        }
-        // 3. Fallback: select the first intersected object
-        if (!selectedObject && intersects.length > 0) {
-            selectedObject = intersects[0].object;
-        }
-
+        const selectedObject = filterSelectedObject(intersects);
         if (selectedObject) {
             this.selectObject(selectedObject);
         } else {
@@ -545,8 +395,7 @@ export class InteractionManager {
             // Could add lift animation here in the future
         }
 
-        // Show object info
-        this.showObjectInfo(object);
+        // No object info panel in warehouse model
 
         // Log selection to UIManager's log panel with userData details
         if (this.uiManager && typeof this.uiManager.addLog === 'function') {
@@ -657,71 +506,21 @@ export class InteractionManager {
             this.selectedObject = null;
             this.originalMaterial = null;
         }
-        // Hide object info
-        document.getElementById('object-info').style.display = 'none';
+        // No object info panel in warehouse model
     }
 
-    /**
-     * Displays detailed information about the selected object in the info panel.
-     * @param {THREE.Object3D} object
-     */
-    showObjectInfo(object) {
-        const infoPanel = document.getElementById('object-info');
-        const detailsDiv = document.getElementById('object-details');
-        let objectType = 'Unknown Component';
-        let objectDetails = 'Component information not available';
-        // ...existing code for showObjectInfo (already present above, not repeated for brevity)...
-        // You can copy the full implementation here if needed.
-    }
+    // No object info panel in warehouse model
 
     /**
      * Binds event listeners to camera preset buttons.
      */
     bindCameraEvents() {
-        const cameraButtons = document.querySelectorAll('.camera-btn');
-        cameraButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                const presetName = e.target.getAttribute('data-preset');
-                this.setCameraPreset(presetName);
-            });
-        });
+        bindCameraEvents((presetName) => setCameraPreset(this.sceneManager, this.uiManager, presetName));
     }
 
     /**
      * Sets the camera to a preset view.
      * @param {string} presetName
      */
-    setCameraPreset(presetName) {
-        const cfg = this.uiManager.getConfig ? this.uiManager.getConfig() : this.uiManager.uiConfig;
-        const { position, target } = getCameraViewConfig(presetName, cfg);
-        this.animateCamera(
-            new THREE.Vector3(position.x, position.y, position.z),
-            new THREE.Vector3(target.x, target.y, target.z)
-        );
-    }
-
-    /**
-     * Animates the camera to a target position and look-at point.
-     * @param {THREE.Vector3} targetPosition
-     * @param {THREE.Vector3} targetLookAt
-     * @param {number} [duration=1000]
-     */
-    animateCamera(targetPosition, targetLookAt, duration = 1000) {
-        const startPosition = this.sceneManager.camera.position.clone();
-        const startTarget = this.sceneManager.controls.target.clone();
-        let startTime = null;
-        const animate = (currentTime) => {
-            if (!startTime) startTime = currentTime;
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const easeProgress = 1 - Math.pow(1 - progress, 3);
-            this.sceneManager.camera.position.lerpVectors(startPosition, targetPosition, easeProgress);
-            this.sceneManager.controls.target.lerpVectors(startTarget, targetLookAt, easeProgress);
-            this.sceneManager.controls.update();
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            }
-        };
-        requestAnimationFrame(animate);
-    }
+    // Camera preset and animation logic moved to cameraControls.js
 }
