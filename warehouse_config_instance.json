@@ -11,10 +11,10 @@
       10,
       10
     ],
-    "modules_per_aisle": 6,
+    "modules_per_aisle": 7,
     "locations_per_module": 4,
     "storage_depth": 2,
-    "picking_stations": 3
+    "picking_stations": 2
   },
   "missing_locations": [],
   "location_types": {
@@ -22,18 +22,11 @@
       {
         "aisle": null,
         "level": null,
-        "module": 0,
+        "module": 1,
         "depth": null,
         "position": null,
         "type": "Buffer"
       }
-    ],
-    "flowrack_levels": [1, 2, 3, 4],
-    "default_type": "Storage"
-  },
-  "calculated_metrics": {
-    "total_locations": 480,
-    "total_modules": 7,
-    "total_levels": 20
+    ]
   }
 }

@@ -66,6 +66,43 @@ export function importWarehouseConfiguration(jsonFile, validateWarehouseConfigur
             if (!validateWarehouseConfiguration(warehouseConfig)) {
                 throw new Error('Invalid warehouse configuration format');
             }
+
+            // Convert 1-based indices in missing_locations and buffer_locations to 0-based
+            if (Array.isArray(warehouseConfig.missing_locations)) {
+                warehouseConfig.missing_locations = warehouseConfig.missing_locations.map(loc => {
+                    // If loc is an object with index fields, convert them
+                    if (loc && typeof loc === 'object') {
+                        const newLoc = { ...loc };
+                        ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
+                            if (typeof newLoc[key] === 'number') {
+                                newLoc[key] = newLoc[key] - 1;
+                            }
+                        });
+                        return newLoc;
+                    }
+                    return loc;
+                });
+            }
+            if (
+                warehouseConfig.location_types &&
+                Array.isArray(warehouseConfig.location_types.buffer_locations)
+            ) {
+                warehouseConfig.location_types.buffer_locations = warehouseConfig.location_types.buffer_locations.map(loc => {
+                    if (loc && typeof loc === 'object') {
+                        const newLoc = { ...loc };
+                        ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
+                            if (typeof newLoc[key] === 'number') {
+                                newLoc[key] = newLoc[key] - 1;
+                            }
+                        });
+                        return newLoc;
+                    }
+                    return loc;
+                });
+            }
+
+            // If you have other index arrays to convert, add them here
+
             if (callback) {
                 callback(warehouseConfig);
             }

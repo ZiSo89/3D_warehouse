@@ -105,8 +105,7 @@ export class SceneManager {
             TWEEN.update();
         }
 
-        // --- Virtualization: Frustum culling για racks ---
-        // Εφαρμόζεται μόνο σε Meshes για αποφυγή σφαλμάτων
+        // --- Virtualization: Frustum culling + distance-based visibility for racks ---
         if (this.warehouseGroup && this.warehouseGroup.children.length > 0) {
             const frustum = new THREE.Frustum();
             const cameraViewProjectionMatrix = new THREE.Matrix4();
@@ -115,10 +114,36 @@ export class SceneManager {
             cameraViewProjectionMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
             frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
             this.warehouseGroup.children.forEach(child => {
+                // If this is the racksGroup, check its children for rackLines
+                if (child.type === 'Group' && child.children) {
+                    child.children.forEach(grandchild => {
+                        if (grandchild.userData && grandchild.userData.isRackLine) {
+                            // Compute distance from camera to rackLine center
+                            const rackPos = new THREE.Vector3();
+                            grandchild.getWorldPosition(rackPos);
+                            const camPos = this.camera.position;
+                            const dist = rackPos.distanceTo(camPos);
+                            let visible = dist < 120;
+                            if (grandchild.isMesh && grandchild.geometry && grandchild.geometry.boundingSphere) {
+                                try {
+                                    visible = visible && frustum.intersectsObject(grandchild);
+                                } catch (e) {
+                                    visible = visible;
+                                }
+                            }
+                            grandchild.visible = visible;
+                        }
+                    });
+                }
+                // Fallback: normal frustum culling for other objects
                 if (child.isMesh && child.geometry && child.geometry.boundingSphere) {
-                    child.visible = frustum.intersectsObject(child);
-                } else {
-                    child.visible = true; // Π.χ. Groups, Sprites, κλπ
+                    try {
+                        child.visible = frustum.intersectsObject(child);
+                    } catch (e) {
+                        child.visible = true;
+                    }
+                } else if (!child.userData || !child.userData.isRackLine) {
+                    child.visible = true;
                 }
             });
         }

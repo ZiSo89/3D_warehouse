@@ -12,10 +12,10 @@
       10,
       12
     ],
-    "modules_per_aisle": 6,
+    "modules_per_aisle": 7,
     "locations_per_module": 4,
     "storage_depth": 3,
-    "picking_stations": 4
+    "picking_stations": 3
   },
   "missing_locations": [
     {
@@ -27,8 +27,8 @@
     },
     {
       "aisle": [
-        1,
-        2
+        0,
+        1
       ],
       "level": [
         4,
@@ -52,19 +52,13 @@
   "location_types": {
     "buffer_locations": [
       {
-        "aisle": null,
-        "level": null,
-        "module": 0,
-        "depth": null,
-        "position": null,
+      "aisle": null,
+      "level": null,
+      "module": 1,
+      "depth": null,
+      "position": null,
         "type": "Buffer"
       }
-    ],
-    "default_type": "Storage"
-  },
-  "calculated_metrics": {
-    "total_locations": 710,
-    "total_modules": 7,
-    "total_levels": 32
+    ]
   }
 }

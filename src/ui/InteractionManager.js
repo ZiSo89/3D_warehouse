@@ -414,16 +414,22 @@ export class InteractionManager {
                     // Only show incremented aisle, level, module, depth, position
                     const details = incrementKeys
                         .filter(k => typeof object.userData[k] === 'number')
-                        .map(k => `<div style='margin-left:10px;'><strong>${k}:</strong> ${object.userData[k] + 1}</div>`)
+                        .map(k => {
+                            const val = object.userData[k];
+                            return `<div style='margin-left:10px;'><strong>${k}:</strong> ${val === -1 ? '-' : val + 1}</div>`;
+                        })
                         .join('');
                     label = `Selected: <strong>Missing Location</strong>${details}`;
                 } else if (
-                    object.userData.type === 'Buffer' || object.userData.location_type === 'Buffer' || object.userData.type === 'Nothing' || object.userData.location_type === 'Nothing'
+                    object.userData.type === 'Buffer' || object.userData.location_type === 'Buffer'
                 ) {
-                    // Show incremented aisle, level, module, depth, position for Buffer/Nothing, and show type if present
+                    // Show incremented aisle, level, module, depth, position for Buffer, and show type if present
                     const detailsArr = incrementKeys
                         .filter(k => typeof object.userData[k] === 'number')
-                        .map(k => `<div style='margin-left:10px;'><strong>${k}:</strong> ${object.userData[k] + 1}</div>`);
+                        .map(k => {
+                            const val = object.userData[k];
+                            return `<div style='margin-left:10px;'><strong>${k}:</strong> ${val === -1 ? '-' : val + 1}</div>`;
+                        });
                     const details = detailsArr.join('');
                     const typeLabel = object.userData.type ? ` <strong>${object.userData.type}</strong>` : '';
                     label = `Selected:${typeLabel}${details}`;
@@ -431,19 +437,29 @@ export class InteractionManager {
                     // Custom: picking_station log format
                     let details = '';
                     if (Object.prototype.hasOwnProperty.call(object.userData, 'aisle') && typeof object.userData.aisle === 'number') {
-                        details += `<div style='margin-left:10px;'><strong>aisle:</strong> ${object.userData.aisle + 1}</div>`;
+                        const val = object.userData.aisle;
+                        details += `<div style='margin-left:10px;'><strong>aisle:</strong> ${val === -1 ? '-' : val + 1}</div>`;
                     }
                     label = `Selected: picking station${details}`;
                 } else if (object.userData.type === 'lift') {
                     // Custom: lift log format
                     let details = '';
                     if (Object.prototype.hasOwnProperty.call(object.userData, 'aisleId') && typeof object.userData.aisleId === 'number') {
-                        details += `<div style='margin-left:10px;'><strong>Aisle:</strong> ${object.userData.aisleId + 1}</div>`;
+                        const val = object.userData.aisleId;
+                        details += `<div style='margin-left:10px;'><strong>Aisle:</strong> ${val === -1 ? '-' : val + 1}</div>`;
                     }
                     label = `Selected: lift${details}`;
                 } else if (object.userData.type === 'conveyor_segment') {
                     // Custom: conveyor_segment log format
                     let details = '';
+                    if (Object.prototype.hasOwnProperty.call(object.userData, 'aisleId') && typeof object.userData.aisleId === 'number') {
+                        const val = object.userData.aisleId;
+                        details += `<div style='margin-left:10px;'><strong>Aisle:</strong> ${val === -1 ? '-' : val + 1}</div>`;
+                    }
+                    if (Object.prototype.hasOwnProperty.call(object.userData, 'level') && typeof object.userData.level === 'number') {
+                        const val = object.userData.level;
+                        details += `<div style='margin-left:10px;'><strong>level:</strong> ${val === -1 ? '-' : val + 1}</div>`;
+                    }
                     if (object.userData.flow_type) {
                         details += `<div style='margin-left:10px;'><strong>type:</strong> ${object.userData.flow_type}</div>`;
                     }
@@ -452,10 +468,12 @@ export class InteractionManager {
                     // Custom: shuttle log format
                     let details = '';
                     if (Object.prototype.hasOwnProperty.call(object.userData, 'aisleId') && typeof object.userData.aisleId === 'number') {
-                        details += `<div style='margin-left:10px;'><strong>Aisle:</strong> ${object.userData.aisleId + 1}</div>`;
+                        const val = object.userData.aisleId;
+                        details += `<div style='margin-left:10px;'><strong>Aisle:</strong> ${val === -1 ? '-' : val + 1}</div>`;
                     }
                     if (Object.prototype.hasOwnProperty.call(object.userData, 'level') && typeof object.userData.level === 'number') {
-                        details += `<div style='margin-left:10px;'><strong>level:</strong> ${object.userData.level + 1}</div>`;
+                        const val = object.userData.level;
+                        details += `<div style='margin-left:10px;'><strong>level:</strong> ${val === -1 ? '-' : val + 1}</div>`;
                     }
                     label = `Selected: shuttle${details}`;
                 } else {
@@ -465,7 +483,7 @@ export class InteractionManager {
                         .filter(([k, v]) => !excludeKeys.includes(k))
                         .map(([k, v]) => {
                             if (incrementKeys.includes(k) && typeof v === 'number') {
-                                return `<div style='margin-left:10px;'><strong>${k}:</strong> ${v + 1}</div>`;
+                                return `<div style='margin-left:10px;'><strong>${k}:</strong> ${v === -1 ? '-' : v + 1}</div>`;
                             }
                             return `<div style='margin-left:10px;'><strong>${k}:</strong> ${v}</div>`;
                         })

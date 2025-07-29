@@ -120,6 +120,7 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
         // Create West and East rack lines
         for (let i = 0; i < 2; i++) {
             const rackLine = new THREE.Group();
+            rackLine.userData.isRackLine = true; // Tag for LOD visibility
             const isEast = i === 1;
             rackLine.position.x = a * rackAndAisleWidth + (isEast ? totalRackDepth + constants.aisleWidth : 0);
 
