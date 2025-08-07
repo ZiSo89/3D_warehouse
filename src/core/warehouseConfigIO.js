@@ -10,6 +10,33 @@
  * @returns {Object} The warehouse configuration object.
  */
 export function exportWarehouseConfiguration(uiConfig, missingLocations, locationTypes, calculateTotalLocations, filename = 'warehouse_config.json') {
+    // Convert internal 0-based indices to 1-based for JSON export
+    const convertedMissingLocations = missingLocations.map(loc => {
+        if (loc && typeof loc === 'object') {
+            const newLoc = { ...loc };
+            ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
+                if (typeof newLoc[key] === 'number' && newLoc[key] !== -1) {
+                    newLoc[key] = newLoc[key] + 1;
+                }
+            });
+            return newLoc;
+        }
+        return loc;
+    });
+
+    const convertedBufferLocations = locationTypes.buffer_locations.map(loc => {
+        if (loc && typeof loc === 'object') {
+            const newLoc = { ...loc };
+            ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
+                if (typeof newLoc[key] === 'number' && newLoc[key] !== -1) {
+                    newLoc[key] = newLoc[key] + 1;
+                }
+            });
+            return newLoc;
+        }
+        return loc;
+    });
+
     const warehouseConfig = {
         metadata: {
             name: filename.replace('.json', ''),
@@ -25,13 +52,13 @@ export function exportWarehouseConfiguration(uiConfig, missingLocations, locatio
             storage_depth: uiConfig.storage_depth,
             picking_stations: uiConfig.picking_stations
         },
-        missing_locations: [...missingLocations],
+        missing_locations: [...convertedMissingLocations],
         location_types: {
-            buffer_locations: [...locationTypes.buffer_locations],
+            buffer_locations: [...convertedBufferLocations],
             default_type: locationTypes.default_type
         },
         calculated_metrics: {
-            total_locations: calculateTotalLocations(uiConfig),
+            total_locations: calculateTotalLocations(uiConfig, missingLocations),
             total_modules: uiConfig.aisles * uiConfig.modules_per_aisle,
             total_levels: uiConfig.levels_per_aisle.reduce((sum, levels) => sum + levels, 0)
         }
@@ -44,11 +71,19 @@ export function exportWarehouseConfiguration(uiConfig, missingLocations, locatio
     const downloadLink = document.createElement('a');
     downloadLink.href = url;
     downloadLink.download = filename;
+    downloadLink.style.display = 'none';
+    
+    // Add to DOM and trigger download immediately
     document.body.appendChild(downloadLink);
     downloadLink.click();
-    document.body.removeChild(downloadLink);
-    URL.revokeObjectURL(url);
+    
+    // Clean up after download
+    setTimeout(() => {
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(url);
+    }, 100);
 
+    console.log('✅ Warehouse configuration exported:', filename);
     return warehouseConfig;
 }
 

@@ -11,6 +11,7 @@ import { createInteractionPanel, updatePanelText } from './interactionPanel.js';
 import { bindCameraEvents, setCameraPreset, animateCamera } from './cameraControls.js';
 import { getSelectableObjects, filterSelectedObject } from './objectSelectionUtils.js';
 import { exportWarehouseConfiguration, importWarehouseConfiguration, validateWarehouseConfiguration } from '../core/warehouseConfigIO.js';
+import { calculateTotalLocations } from '../core/warehouseMetrics.js';
 
 export class InteractionManager {
     /**
@@ -183,7 +184,7 @@ export class InteractionManager {
                     this.uiManager.uiConfig,
                     this.sceneManager.missingLocations,
                     this.sceneManager.locationTypes,
-                    this.sceneManager.calculateTotalLocations.bind(this.sceneManager),
+                    calculateTotalLocations,
                     filename
                 );
             }
