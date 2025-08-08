@@ -13,6 +13,11 @@ import { updateMissingLocations, addMissingLocation, clearMissingLocations, getL
 import { calculateTotalLocations } from './warehouseMetrics.js';
 import { getCameraViewConfig } from '../ui/uiUtils.js';
 
+/**
+ * Main scene manager for the 3D warehouse visualization.
+ * Handles scene setup, camera controls, lighting, and warehouse building.
+ * @class SceneManager
+ */
 export class SceneManager {
     /**
      * Handles window resize: updates camera aspect and renderer size.
@@ -24,6 +29,11 @@ export class SceneManager {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+    /**
+     * Creates a new SceneManager instance.
+     * Initializes Three.js scene, camera, renderer, and controls.
+     * @constructor
+     */
     constructor() {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -48,7 +58,9 @@ export class SceneManager {
     }
 
     /**
-     * Load default configuration from warehouse_config_instance.json
+     * Loads default configuration from warehouse_config_instance.json file.
+     * @async
+     * @returns {Promise<Object|null>} The loaded configuration object or null if failed
      */
     async loadDefaultConfiguration() {
         try {
@@ -95,8 +107,8 @@ export class SceneManager {
     }
 
     /**
-     * Fits the camera view to the warehouseGroup, ignoring compass and helpers.
-     * Optionally animates the camera move.
+     * Fits the camera view to the warehouse group, ignoring compass and helpers.
+     * @param {boolean} [animate=true] - Whether to animate the camera transition
      */
     fitToWarehouseView(animate) {
         if (typeof animate === 'undefined') animate = true;
@@ -232,6 +244,15 @@ export class SceneManager {
     }
 
 
+    /**
+     * Builds the complete warehouse 3D model based on UI configuration.
+     * Creates racks, prezone, lighting, and initializes LOD management.
+     * @param {Object} uiConfig - Configuration object containing warehouse parameters
+     * @param {number} uiConfig.aisles - Number of aisles
+     * @param {number} uiConfig.storage_depth - Storage depth per aisle
+     * @param {Array} uiConfig.levels_per_aisle - Levels for each aisle
+     * @param {number} uiConfig.picking_stations - Number of picking stations
+     */
     buildWarehouse(uiConfig) {
         // Store the current configuration
         this.currentConfig = { ...uiConfig };

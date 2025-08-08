@@ -1,6 +1,16 @@
-// theme.js
-// Central theme config for UI colors and palette
+/**
+ * Theme configuration and color utilities for the warehouse application.
+ * @fileoverview Central theme config for UI colors, location type colors, and color generation utilities
+ */
 
+/**
+ * Main UI theme configuration object containing all color definitions.
+ * @type {Object}
+ * @property {string} bg - Background color
+ * @property {string} border - Border color
+ * @property {string} header - Header color
+ * @property {string} sectionBg - Section background color
+ */
 export const UI_THEME = {
     bg: '#f1faee',
     border: '#1e3231',
@@ -29,7 +39,11 @@ export const UI_THEME = {
     scrollbarTrack: '#e0e4e2',
 };
 
-// Centralized color map for location types (used in createRacks.js and elsewhere)
+/**
+ * Centralized color map for different location types in the warehouse.
+ * Used in createRacks.js and other visualization components.
+ * @type {Object<string, number>}
+ */
 export const LOCATION_TYPE_COLORS = {
     Buffer: 0xbc6c25, // theme toggleHover (orange)
     Service: 0x9c27b0, // Purple for service locations

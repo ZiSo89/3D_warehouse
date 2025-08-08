@@ -14,10 +14,16 @@ import { exportWarehouseConfiguration, importWarehouseConfiguration, validateWar
 import { calculateTotalLocations } from '../core/warehouseMetrics.js';
 import { constants } from '../core/constants.js';
 
+/**
+ * Manages user interactions with the 3D warehouse scene.
+ * Handles mouse events, object selection, keyboard shortcuts, and UI updates.
+ * @class InteractionManager
+ */
 export class InteractionManager {
     /**
-     * @param {SceneManager} sceneManager
-     * @param {UIManager} uiManager
+     * Creates a new InteractionManager instance.
+     * @param {SceneManager} sceneManager - The scene manager instance
+     * @param {UIManager} uiManager - The UI manager instance
      */
     constructor(sceneManager, uiManager) {
         this.sceneManager = sceneManager;
@@ -377,6 +383,11 @@ export class InteractionManager {
      * Handles mouse click events for object selection in the 3D scene.
      * @param {MouseEvent|Object} event - The mouse or synthetic event.
      */
+    /**
+     * Handles mouse click events for object selection.
+     * Uses raycasting to detect clicked objects and highlights them.
+     * @param {MouseEvent} event - The mouse click event
+     */
     onMouseClick(event) {
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -404,7 +415,7 @@ export class InteractionManager {
      * @param {KeyboardEvent} event
      */
     onKeyDown(event) {
-        // Log camera position when 'C' is pressed
+        // Log camera position when 'C' is pressed (for debugging)
         if (event.key === 'c' || event.key === 'C') {
             const cam = this.sceneManager.camera;
             if (cam && cam.position) {
@@ -451,7 +462,6 @@ export class InteractionManager {
 
         // Special handling for lift - could add lift movement animation here
         if (object.userData && object.userData.type === 'lift') {
-            console.log('Container Lift selected - ready for operations');
             // Could add lift animation here in the future
         }
 

@@ -1,13 +1,16 @@
-// Warehouse configuration export/import helpers for SceneManager modularization
+/**
+ * Warehouse configuration export/import utilities.
+ * @fileoverview Helper functions for exporting and importing warehouse configurations
+ */
 
 /**
  * Exports the warehouse configuration as a JSON file and returns the config object.
- * @param {Object} uiConfig - The current UI configuration.
- * @param {Array} missingLocations - Array of missing locations.
- * @param {Object} locationTypes - Location types object.
- * @param {Function} calculateTotalLocations - Function to calculate total locations.
- * @param {string} [filename='warehouse_config.json'] - The filename for export.
- * @returns {Object} The warehouse configuration object.
+ * @param {Object} uiConfig - The current UI configuration
+ * @param {Array} missingLocations - Array of missing locations
+ * @param {Object} locationTypes - Location types object
+ * @param {Function} calculateTotalLocations - Function to calculate total locations
+ * @param {string} [filename='warehouse_config.json'] - The filename for export
+ * @returns {Object} The warehouse configuration object
  */
 export function exportWarehouseConfiguration(uiConfig, missingLocations, locationTypes, calculateTotalLocations, filename = 'warehouse_config.json') {
     // Convert internal 0-based indices to 1-based for JSON export

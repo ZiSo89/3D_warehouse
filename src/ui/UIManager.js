@@ -2,6 +2,11 @@ import { getCameraViewConfig } from './uiUtils.js';
 import * as THREE from 'three';
 import { UI_THEME } from './theme.js';
 
+/**
+ * Manages the user interface for warehouse configuration and controls.
+ * Handles panel creation, slider controls, and warehouse parameter updates.
+ * @class UIManager
+ */
 export class UIManager {
     /**
      * Appends a log message to the Logs / Info panel.
@@ -37,7 +42,9 @@ export class UIManager {
         }
     }
     /**
-     * @param {SceneManager} sceneManager
+     * Creates a new UIManager instance.
+     * Initializes default warehouse configuration and creates UI elements.
+     * @param {SceneManager} sceneManager - The scene manager instance
      */
     constructor(sceneManager) {
         this.sceneManager = sceneManager;

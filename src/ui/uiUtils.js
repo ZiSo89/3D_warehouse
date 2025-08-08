@@ -1,8 +1,13 @@
 /**
+ * UI utility functions for warehouse configuration management.
+ * @fileoverview Shared utility functions for UIManager and InteractionManager
+ */
+
+/**
  * Ensures the levels_per_aisle array matches the aisle count, filling with a default value if needed.
- * @param {Array} levelsArr - The levels_per_aisle array to mutate.
- * @param {number} aisleCount - The desired length.
- * @param {number} [defaultLevel=5] - The default value to use when extending.
+ * @param {Array<number>} levelsArr - The levels_per_aisle array to mutate
+ * @param {number} aisleCount - The desired length
+ * @param {number} [defaultLevel=5] - The default value to use when extending
  */
 export function syncLevelsPerAisle(levelsArr, aisleCount, defaultLevel = 5) {
     while (levelsArr.length < aisleCount) {
@@ -20,8 +25,11 @@ export function syncLevelsPerAisle(levelsArr, aisleCount, defaultLevel = 5) {
 /**
  * Returns camera position and target for a given view name and warehouse config.
  * @param {string} view - The view name (overview, front, side, top, aisle, topView, sideView, prezoneView, aisleView)
- * @param {object} config - The warehouse config object
- * @returns {{position: {x:number, y:number, z:number}, target: {x:number, y:number, z:number}}}
+ * @param {Object} config - The warehouse config object
+ * @param {number} config.aisles - Number of aisles
+ * @param {number} config.storage_depth - Storage depth per aisle
+ * @param {number} config.modules_per_aisle - Number of modules per aisle
+ * @returns {{position: {x:number, y:number, z:number}, target: {x:number, y:number, z:number}}} Camera configuration
  */
 export function getCameraViewConfig(view, config) {
     // These values should match the constants used in the main codebase

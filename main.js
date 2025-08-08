@@ -1,3 +1,9 @@
+/**
+ * Main entry point for the 3D Warehouse Visualization Application.
+ * Initializes the scene, UI components, and handles keyboard navigation.
+ * @fileoverview 3D warehouse model with performance optimizations and interactive controls
+ */
+
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SceneManager } from './src/core/SceneManager.js';
@@ -5,7 +11,7 @@ import { UIManager } from './src/ui/UIManager.js';
 import { InteractionManager } from './src/ui/InteractionManager.js';
 import { PerformanceMonitorUI } from './src/ui/PerformanceMonitorUI.js';
 
-
+// Initialize core components
 const sceneManager = new SceneManager();
 // Make canvas focusable and focus it for keyboard navigation
 const canvas = sceneManager.renderer.domElement;
@@ -23,7 +29,12 @@ const interactionManager = new InteractionManager(sceneManager, uiManager);
 // Initialize Performance Monitor
 const performanceMonitor = new PerformanceMonitorUI(sceneManager);
 
-// Build initial warehouse with UI config - wait for configuration to load
+/**
+ * Initializes the warehouse with default configuration.
+ * Loads configuration from JSON file and builds the 3D model.
+ * @async
+ * @function initializeWarehouse
+ */
 const initializeWarehouse = async () => {
     // Wait for default configuration to load
     if (sceneManager.loadDefaultConfiguration) {
@@ -42,40 +53,21 @@ document.addEventListener('keydown', (event) => {
         const current = sceneManager.isInstancedRenderingEnabled();
         sceneManager.toggleInstancedRendering(!current);
         sceneManager.buildWarehouse(uiManager.getConfig());
-        console.log(`🔄 Rendering mode switched to: ${!current ? 'Instanced' : 'Regular'}`);
-        console.log('💡 Now try selecting objects to see the difference');
+        console.log(`🔄 Rendering mode: ${!current ? 'Instanced' : 'Regular'}`);
     }
     if (event.key === 'h' || event.key === 'H') {
         // Show help
-        console.log('🎮 Keyboard shortcuts:');
-        console.log('  I - Toggle between Instanced and Regular rendering');
-        console.log('  P - Toggle performance monitor');
-        console.log('  C - Log camera position');
-        console.log('  H - Show this help');
+        console.log('🎮 Keyboard shortcuts: I=Toggle rendering | P=Performance monitor | C=Camera position | H=Help');
     }
 });
 
-console.log('🚀 Warehouse 3D Model loaded with performance optimizations!');
-console.log('📊 Press "P" to toggle performance monitor');
-console.log('🔄 Press "I" to toggle between Instanced/Regular rendering');
-console.log('❓ Press "H" for all keyboard shortcuts');
-console.log('🎯 Optimizations active:');
-console.log('  • Instanced Rendering: Reduces draw calls');
-console.log('  • 3-Level LOD System: Automatic quality adjustment');
-console.log('  • Texture Atlasing: Optimized materials');
-console.log('  • Advanced Frustum Culling: Spatial partitioning');
-console.log('📍 Click on objects to select them - instanced objects show detailed info');
+console.log('🚀 Warehouse 3D Model loaded! Press "H" for keyboard shortcuts.');
 
 // === Game-like Keyboard Navigation ===
-// WASD/Arrow keys: move camera target, Q/E: up/down, R/F: zoom in/out, C: log camera position
 const keyState = {};
-
-const moveStep = 0.45; // per frame, faster
+const moveStep = 0.45;
 const zoomStep = 0.55;
-const navigationKeys = [
-    'w','a','s','d','q','e','r','f',
-    'arrowup','arrowdown','arrowleft','arrowright'
-];
+const navigationKeys = ['w','a','s','d','q','e','r','f','arrowup','arrowdown','arrowleft','arrowright'];
 
 window.addEventListener('keydown', (e) => {
     keyState[e.key.toLowerCase()] = true;
@@ -90,17 +82,22 @@ window.addEventListener('keyup', (e) => {
     }
 });
 
+/**
+ * Main game-like camera control loop using WASD keys.
+ * Provides continuous camera movement and zoom controls.
+ * @function gameCameraLoop
+ */
 function gameCameraLoop() {
-    // Always get the latest controls/camera (in case warehouse is rebuilt)
     const controls = sceneManager.controls;
     const camera = sceneManager.camera;
     if (!controls || !camera) {
-        // Controls/camera not ready yet - this is normal during initialization
         requestAnimationFrame(gameCameraLoop);
         return;
     }
+    
     let moved = false;
-    // Forward/back (W/S or Up/Down)
+    
+    // Movement: WASD/Arrow keys
     if (keyState['w'] || keyState['arrowup']) {
         controls.target.z -= moveStep;
         moved = true;
@@ -109,7 +106,6 @@ function gameCameraLoop() {
         controls.target.z += moveStep;
         moved = true;
     }
-    // Left/right (A/D or Left/Right)
     if (keyState['a'] || keyState['arrowleft']) {
         controls.target.x += moveStep;
         moved = true;
@@ -118,7 +114,8 @@ function gameCameraLoop() {
         controls.target.x -= moveStep;
         moved = true;
     }
-    // Up/down (Q/E)
+    
+    // Vertical: Q/E
     if (keyState['q']) {
         controls.target.y += moveStep;
         moved = true;
@@ -127,7 +124,8 @@ function gameCameraLoop() {
         controls.target.y -= moveStep;
         moved = true;
     }
-    // Zoom in/out (R/F)
+    
+    // Zoom: R/F
     if (keyState['r']) {
         camera.position.addScaledVector(camera.getWorldDirection(new THREE.Vector3()), moveStep * zoomStep);
         moved = true;
