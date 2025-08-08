@@ -199,11 +199,6 @@ export class InteractionManager {
         panel.querySelector('#import-file-input').addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
-                console.log('📁 Importing file:', {
-                    name: file.name,
-                    size: file.size,
-                    lastModified: new Date(file.lastModified).toISOString()
-                });
                 this.showLoadingOverlay();
                 importWarehouseConfiguration(
                     file,
@@ -230,13 +225,6 @@ export class InteractionManager {
                         };
                         this.uiManager.uiConfig = importedConfig;
                         
-                        console.log('📥 Applied imported config from', file.name, ':', {
-                            aisles: importedConfig.aisles,
-                            levels_per_aisle: importedConfig.levels_per_aisle,
-                            modules_per_aisle: importedConfig.modules_per_aisle,
-                            locations_per_module: importedConfig.locations_per_module,
-                            fileModified: new Date(file.lastModified).toISOString()
-                        });
                         this.updateInputPanelFromConfig(panel);
                         this.uiManager.updateStorageCapacity();
                         // Build the warehouse with the imported config (no clamping)
@@ -314,7 +302,7 @@ export class InteractionManager {
             });
         }
         
-        console.log('📊 Updated level sliders with max:', maxLevels, 'for values:', this.uiManager.uiConfig.levels_per_aisle);
+        // Remove verbose logging from level inputs
     }
 
     /**
@@ -382,14 +370,6 @@ export class InteractionManager {
         if (config.picking_stations > parseInt(stationsSlider.max)) {
             stationsSlider.max = Math.max(config.picking_stations, 10);
         }
-        
-        console.log('📊 Updated slider ranges for imported config:', {
-            aisles: aislesSlider.max,
-            modules: modulesSlider.max,
-            locations: locationsSlider.max,
-            depth: depthSlider.max,
-            stations: stationsSlider.max
-        });
     }
 
 
@@ -698,17 +678,8 @@ export class InteractionManager {
         const scale = new THREE.Vector3();
         worldMatrix.decompose(position, quaternion, scale);
         
-        console.log('Instance world position:', position);
-        console.log('Intersection point was:', instanceObject.instancePosition);
-        
         // Determine the appropriate size based on the object type
         let width, height, depth;
-        
-        console.log('Original mesh info:', {
-            isInstancedRack: originalMesh.userData.isInstancedRack,
-            name: originalMesh.name,
-            userData: originalMesh.userData
-        });
         
         // Check if this is a rack location or frame
         if (originalMesh.userData.isInstancedRack) {
@@ -716,26 +687,17 @@ export class InteractionManager {
             width = constants.locationLength;
             height = constants.levelHeight;
             depth = constants.locationDepth;
-            console.log('Using storage location dimensions');
         } else if (originalMesh.name && originalMesh.name.includes('frame')) {
             // This is a rack frame - use frame dimensions
             width = constants.modulePostSize;
             height = constants.levelHeight * 2; // Frames are taller
             depth = constants.modulePostSize;
-            console.log('Using frame dimensions');
         } else {
             // Default to location size for unknown objects
             width = constants.locationLength;
             height = constants.levelHeight;
             depth = constants.locationDepth;
-            console.log('Using default location dimensions');
         }
-        
-        console.log('Constants values:', {
-            locationLength: constants.locationLength,
-            levelHeight: constants.levelHeight,
-            locationDepth: constants.locationDepth
-        });
         
         // Instead of using constants, get the actual geometry dimensions
         const originalGeometry = originalMesh.geometry;
@@ -751,17 +713,10 @@ export class InteractionManager {
             actualHeight = box.max.y - box.min.y;
             actualDepth = box.max.z - box.min.z;
             
-            console.log('Using actual geometry dimensions:', {
-                width: actualWidth,
-                height: actualHeight,
-                depth: actualDepth
-            });
-            
             width = actualWidth;
             height = actualHeight;
             depth = actualDepth;
         } else {
-            console.log('No bounding box available, using constants');
             // Fallback to constants if no bounding box
             width = constants.locationLength;
             height = constants.levelHeight;
@@ -775,17 +730,9 @@ export class InteractionManager {
             depth * 1.05
         );
         
-        console.log('Final highlight dimensions:', {
-            width: width * 1.05,
-            height: height * 1.05, 
-            depth: depth * 1.05,
-            source: originalGeometry && originalGeometry.boundingBox ? 'geometry' : 'constants'
-        });
-        
         const highlightMaterial = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
             wireframe: true,
-            linewidth: 3,
             transparent: true,
             opacity: 0.9
         });
@@ -800,9 +747,6 @@ export class InteractionManager {
         this.instanceHighlight.rotation.set(0, 0, 0);
         
         this.instanceHighlight.userData.isHighlight = true;
-        
-        console.log('Creating highlight centered at:', position);
-        console.log('Without rotation (world-aligned)');
         
         this.sceneManager.scene.add(this.instanceHighlight);
     }

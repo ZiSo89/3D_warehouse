@@ -5,7 +5,6 @@ import { createRacks } from '../components/createRacks.js';
 import { createRacksInstanced } from '../components/createRacksInstanced.js';
 import { createPrezone } from '../components/createPrezone.js';
 import { AdvancedLODManager } from './AdvancedLODManager.js';
-//import { createShuttle, createLift } from '../components/createTransporters.js';
 import { AnimationManager } from '../animation/AnimationManager.js';
 import { constants } from './constants.js';
 import { setupLighting, createGroundPlane } from './sceneLighting.js';
@@ -57,15 +56,11 @@ export class SceneManager {
             if (response.ok) {
                 const config = await response.json();
                 
+                console.log('✅ Default configuration loaded');
+                
                 // Convert 1-based indices to 0-based for internal use
                 this.missingLocations = this.convertToZeroBased(config.missing_locations || []);
                 this.locationTypes = this.convertToZeroBased(config.location_types || []);
-                
-                console.log('Loaded default configuration with 1-based to 0-based conversion:', {
-                    missingLocations: this.missingLocations.length,
-                    locationTypes: this.locationTypes.length,
-                    sampleLocationTypes: this.locationTypes.slice(0, 2)
-                });
             } else {
                 console.warn('Could not load default configuration from warehouse_config_instance.json');
             }
@@ -142,11 +137,6 @@ export class SceneManager {
                 );
                 this.controls.update();
             }
-            
-            console.log('📷 Camera positioned to overview:', {
-                position: overviewConfig.position,
-                target: overviewConfig.target
-            });
         } else {
             // Fallback to original behavior if no config available
             const fitOffset = 0.8;
@@ -158,7 +148,6 @@ export class SceneManager {
                 this.controls.target.copy(center);
                 this.controls.update();
             }
-            console.log('📷 Camera positioned using fallback method');
         }
 
         this.scene.background = new THREE.Color(0xf1faee); // Light cream from palette
@@ -275,8 +264,6 @@ export class SceneManager {
 
         // Update compass position after warehouse is rebuilt
         updateCompassPosition(this.compassGroup, this.warehouseGroup);
-        
-        console.log(`Warehouse built with ${this.useInstancedRendering ? 'instanced' : 'regular'} rendering`);
     }
 
     updateTheme(isDark) {
@@ -294,9 +281,12 @@ export class SceneManager {
     /**
      * Toggle between instanced and regular rendering
      */
+    setInstancedRendering(enabled) {
+        this.useInstancedRendering = enabled;
+    }
+
     toggleInstancedRendering(enabled) {
         this.useInstancedRendering = enabled;
-        console.log(`Instanced rendering ${enabled ? 'enabled' : 'disabled'}`);
     }
 
     /**
@@ -311,7 +301,6 @@ export class SceneManager {
      */
     toggleLOD(enabled) {
         this.useLOD = enabled;
-        console.log(`LOD system ${enabled ? 'enabled' : 'disabled'}`);
     }
 
     /**

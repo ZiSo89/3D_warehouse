@@ -6,9 +6,12 @@
     "description": "Exported warehouse configuration"
   },
   "warehouse_parameters": {
-    "aisles": 3,
+    "aisles": 6,
     "levels_per_aisle": [
       10,
+      5,
+      3,
+            10,
       5,
       3
     ],

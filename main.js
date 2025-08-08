@@ -95,15 +95,9 @@ function gameCameraLoop() {
     const controls = sceneManager.controls;
     const camera = sceneManager.camera;
     if (!controls || !camera) {
-        // Only log once per missing controls/camera
-        if (!window._navWarned) {
-            console.warn('[KeyboardNav] controls or camera not ready', controls, camera);
-            window._navWarned = true;
-        }
+        // Controls/camera not ready yet - this is normal during initialization
         requestAnimationFrame(gameCameraLoop);
         return;
-    } else {
-        window._navWarned = false;
     }
     let moved = false;
     // Forward/back (W/S or Up/Down)

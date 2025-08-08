@@ -60,7 +60,6 @@ export function getLocationTypeColor(type, depth) {
         };
     } else {
         // Unknown type: generate a consistent color based on type name
-        console.log(`Generating dynamic color for location type: "${type}"`);
         
         // Create a better hash function for consistent colors
         let hash = 0;
@@ -75,8 +74,6 @@ export function getLocationTypeColor(type, depth) {
         
         // Convert HSL to RGB
         const color = hslToHex(hue, saturation, lightness);
-        
-        console.log(`Generated color for "${type}": #${color.toString(16).padStart(6, '0')}`);
         
         return {
             color: color,

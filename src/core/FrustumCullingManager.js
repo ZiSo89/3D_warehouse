@@ -66,7 +66,6 @@ export class FrustumCullingManager {
         });
 
         this.stats.spatialCells = this.spatialGrid.size;
-        console.log(`Spatial grid initialized: ${gridCountX}x${gridCountZ} cells, ${this.stats.spatialCells} populated`);
     }
 
     /**
@@ -321,7 +320,6 @@ export class FrustumCullingManager {
      */
     setCullingEnabled(enabled) {
         this.cullingEnabled = enabled;
-        console.log(`Frustum culling ${enabled ? 'enabled' : 'disabled'}`);
     }
 
     /**
@@ -329,7 +327,6 @@ export class FrustumCullingManager {
      */
     setSpatialPartitioning(enabled) {
         this.useSpatialPartitioning = enabled;
-        console.log(`Spatial partitioning ${enabled ? 'enabled' : 'disabled'}`);
     }
 
     /**
@@ -337,7 +334,6 @@ export class FrustumCullingManager {
      */
     setOptimizationSettings(settings) {
         this.optimizationSettings = { ...this.optimizationSettings, ...settings };
-        console.log('Optimization settings updated:', this.optimizationSettings);
     }
 
     /**
@@ -371,6 +367,5 @@ export class FrustumCullingManager {
      */
     dispose() {
         this.spatialGrid.clear();
-        console.log('Frustum culling manager disposed');
     }
 }

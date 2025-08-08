@@ -46,23 +46,8 @@ export class InstancedRacksManager {
         // Create instanced meshes for each location type
         this.createInstancedMeshes(locationGroups, racksGroup);
         
-        // Log location type statistics
-        console.log('Location types created:', Array.from(locationGroups.keys()).map(key => {
-            const group = locationGroups.get(key);
-            return `${group.type}: ${group.positions.length} locations`;
-        }).join(', '));
-        
         // Create rack frames (also instanced)
         this.createInstancedFrames(uiConfig, constants, racksGroup, rackAndAisleWidth, totalRackDepth, moduleLength);
-        
-        // Enhanced statistics reporting
-        const drawCallReduction = Math.max(0, 100 * (1 - this.stats.instancedMeshes / Math.max(this.stats.totalLocations, 1)));
-        console.log('📦 Instanced Racks Performance Report:');
-        console.log(`  📊 Total Locations: ${this.stats.totalLocations}`);
-        console.log(`  🎭 Instanced Meshes: ${this.stats.instancedMeshes}`);
-        console.log(`  🎨 Materials Used: ${this.stats.materialsUsed}`);
-        console.log(`  📈 Draw Call Reduction: ${drawCallReduction.toFixed(1)}%`);
-        console.log(`  💾 Memory Optimization: Active`);
         
         return racksGroup;
     }
@@ -343,11 +328,6 @@ export class InstancedRacksManager {
                 (locType.position === null || locType.position === position);
 
             const matches = aisleMatch && levelMatch && moduleMatch && depthMatch && positionMatch;
-            
-            // Debug logging for position arrays
-            if (Array.isArray(locType.position) && matches) {
-                console.log(`Matched location type "${locType.type}" for position ${position} (0-based) in array [${locType.position}] (0-based) at module ${module} (0-based)`);
-            }
             
             return matches;
         });

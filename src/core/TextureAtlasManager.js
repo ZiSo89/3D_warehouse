@@ -105,8 +105,6 @@ export class TextureAtlasManager {
         
         // Create texture atlas for patterns (if needed)
         this.createPatternAtlas();
-        
-        console.log('Warehouse material atlas created:', this.stats);
     }
 
     /**
@@ -299,8 +297,6 @@ export class TextureAtlasManager {
                 word.charAt(0).toUpperCase() + word.slice(1)
             ).join(' ');
             
-            console.log(`Creating dynamic material for: "${capitalizedType}" (from material name: "${name}")`);
-            
             // Use the improved color generation function
             const colorData = getLocationTypeColor(capitalizedType, 0);
             
@@ -322,7 +318,6 @@ export class TextureAtlasManager {
             this.materials.set(name, material);
             this.stats.materialsCached++;
             
-            console.log(`Created dynamic material for location type: ${capitalizedType} with color: #${colorData.color.toString(16).padStart(6, '0')}`);
             return material;
         }
         
@@ -397,8 +392,6 @@ export class TextureAtlasManager {
             // Enable material optimization
             material.userData.optimizedForInstancing = true;
         });
-
-        console.log('Materials optimized for instanced rendering');
     }
 
     /**
@@ -409,8 +402,6 @@ export class TextureAtlasManager {
         this.materials.forEach((material) => {
             material.needsUpdate = true;
         });
-
-        console.log('Materials preloaded');
     }
 
     /**
@@ -461,7 +452,5 @@ export class TextureAtlasManager {
         this.atlases.clear();
         this.materials.clear();
         this.textureCache.clear();
-
-        console.log('Texture atlas manager disposed');
     }
 }

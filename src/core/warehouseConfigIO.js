@@ -101,14 +101,8 @@ export function importWarehouseConfiguration(jsonFile, validateWarehouseConfigur
         try {
             const warehouseConfig = JSON.parse(event.target.result);
             
-            // Log the imported configuration details
-            console.log('📋 Import details:', {
-                filename: jsonFile.name,
-                fileSize: jsonFile.size,
-                lastModified: new Date(jsonFile.lastModified).toISOString(),
-                configParams: warehouseConfig.warehouse_parameters,
-                metadata: warehouseConfig.metadata
-            });
+            // Log essential import information only
+            console.log('✅ Configuration imported:', jsonFile.name);
             
             if (!validateWarehouseConfiguration(warehouseConfig)) {
                 throw new Error('Invalid warehouse configuration format');

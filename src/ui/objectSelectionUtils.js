@@ -45,13 +45,6 @@ export function filterSelectedObject(intersects) {
             // Get the specific location data for this instance
             const instanceData = obj.userData.locations && obj.userData.locations[intersection.instanceId];
             
-            // Debug logging
-            console.log('Instanced mesh clicked:', {
-                instanceId: intersection.instanceId,
-                instanceData: instanceData,
-                meshUserData: obj.userData
-            });
-            
             // Create a virtual object representing this specific instance
             const instanceObject = {
                 ...obj,
@@ -69,7 +62,6 @@ export function filterSelectedObject(intersects) {
             
             // Check if this instance should be selectable
             if (isSelectableInstance(instanceObject)) {
-                console.log('Selected instanced object with data:', instanceObject.userData);
                 return instanceObject;
             }
             continue;
@@ -77,7 +69,6 @@ export function filterSelectedObject(intersects) {
         
         // 1. Prioritize shuttles/lifts (regular meshes)
         if (obj.userData && (obj.userData.type === 'lift' || obj.userData.type === 'shuttle')) {
-            console.log('Selected transport object:', obj);
             return obj;
         }
     }
@@ -175,18 +166,10 @@ export function showObjectInfo(object) {
         infoPanel.style.display = 'none';
     }
     
-    // Log selection for debugging (console only)
+    // Store selection data for debugging if needed
     if (object.userData && object.userData.isInstancedMeshInstance) {
-        console.log('Selected instanced object:', {
-            instanceId: object.userData.instanceId,
-            type: object.userData.type,
-            aisle: object.userData.aisle,
-            level: object.userData.level,
-            module: object.userData.module,
-            depth: object.userData.depth,
-            position: object.userData.position
-        });
+        // Instance selection data available in object.userData
     } else {
-        console.log('Selected object:', object.userData || { name: object.name });
+        // Regular object selection data available in object.userData
     }
 }
