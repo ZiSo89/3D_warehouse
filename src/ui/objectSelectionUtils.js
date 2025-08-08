@@ -3,31 +3,94 @@ import * as THREE from 'three';
 
 export function getSelectableObjects(sceneManager) {
     const objectsToCheck = [];
+    
+    // Handle regular meshes and groups
     if (sceneManager.warehouseGroup) {
-        objectsToCheck.push(...sceneManager.warehouseGroup.children);
+        sceneManager.warehouseGroup.traverse((child) => {
+            // Include both regular meshes and instanced meshes
+            if (child.isMesh || child.isInstancedMesh) {
+                objectsToCheck.push(child);
+            }
+        });
     }
+    
+    // Handle animated objects
     if (sceneManager.animationManager) {
         if (sceneManager.animationManager.shuttleGroup) {
-            objectsToCheck.push(...sceneManager.animationManager.shuttleGroup.children);
+            sceneManager.animationManager.shuttleGroup.traverse((child) => {
+                if (child.isMesh || child.isInstancedMesh) {
+                    objectsToCheck.push(child);
+                }
+            });
         }
         if (sceneManager.animationManager.liftGroup) {
-            objectsToCheck.push(...sceneManager.animationManager.liftGroup.children);
+            sceneManager.animationManager.liftGroup.traverse((child) => {
+                if (child.isMesh || child.isInstancedMesh) {
+                    objectsToCheck.push(child);
+                }
+            });
         }
     }
+    
     return objectsToCheck;
 }
 
 export function filterSelectedObject(intersects) {
-    // 1. Prioritize shuttles/lifts
+    // Handle instanced meshes specially
     for (let intersection of intersects) {
         const obj = intersection.object;
+        
+        // For instanced meshes, we need to check the instanceId
+        if (obj.isInstancedMesh) {
+            // Get the specific location data for this instance
+            const instanceData = obj.userData.locations && obj.userData.locations[intersection.instanceId];
+            
+            // Debug logging
+            console.log('Instanced mesh clicked:', {
+                instanceId: intersection.instanceId,
+                instanceData: instanceData,
+                meshUserData: obj.userData
+            });
+            
+            // Create a virtual object representing this specific instance
+            const instanceObject = {
+                ...obj,
+                userData: {
+                    ...obj.userData,
+                    ...instanceData, // Include the specific location data
+                    instanceId: intersection.instanceId,
+                    isInstancedMeshInstance: true,
+                    originalMesh: obj
+                },
+                // Add position information for this specific instance
+                instancePosition: intersection.point,
+                instanceId: intersection.instanceId
+            };
+            
+            // Check if this instance should be selectable
+            if (isSelectableInstance(instanceObject)) {
+                console.log('Selected instanced object with data:', instanceObject.userData);
+                return instanceObject;
+            }
+            continue;
+        }
+        
+        // 1. Prioritize shuttles/lifts (regular meshes)
         if (obj.userData && (obj.userData.type === 'lift' || obj.userData.type === 'shuttle')) {
+            console.log('Selected transport object:', obj);
             return obj;
         }
     }
+    
     // 2. If not found, look for storage locations and other components
     for (let intersection of intersects) {
         const obj = intersection.object;
+        
+        // Skip instanced meshes in this pass (already handled above)
+        if (obj.isInstancedMesh) {
+            continue;
+        }
+        
         if (
             (obj.userData && (obj.userData.type === 'conveyor' || obj.userData.type === 'picking_station')) ||
             (obj.name && (obj.name.startsWith('SOURCE_') || obj.name.startsWith('TARGET_') || obj.name.startsWith('PREZONE_')))
@@ -67,13 +130,63 @@ export function filterSelectedObject(intersects) {
     return null;
 }
 
+/**
+ * Check if an instanced mesh instance should be selectable
+ * @param {Object} instanceObject - The virtual instance object
+ * @returns {boolean} - Whether this instance is selectable
+ */
+function isSelectableInstance(instanceObject) {
+    // Safety check: ensure instanceObject and originalMesh exist
+    if (!instanceObject || !instanceObject.userData || !instanceObject.userData.originalMesh) {
+        return false;
+    }
+    
+    const obj = instanceObject.userData.originalMesh;
+    
+    // Safety check: ensure obj exists
+    if (!obj) {
+        return false;
+    }
+    
+    // Allow selection of rack locations and warehouse components
+    if (obj.userData && obj.userData.type) {
+        const type = obj.userData.type;
+        return ['Storage', 'Buffer', 'Pick', 'Replenishment', 'rack_frame', 'rack_location'].includes(type);
+    }
+    
+    // Allow selection based on mesh name patterns
+    if (obj.name) {
+        return obj.name.includes('rack') || obj.name.includes('location') || obj.name.includes('frame');
+    }
+    
+    // Default to selectable for warehouse components
+    return true;
+}
+
 export function showObjectInfo(object) {
+    // Since the InteractionManager already displays detailed object information 
+    // in the "Informations" section, we'll hide the duplicate "Selected Object" 
+    // section to avoid showing the same information twice
+    
     const infoPanel = document.getElementById('object-info');
-    const detailsDiv = document.getElementById('object-details');
-    let objectType = 'Unknown Component';
-    let objectDetails = 'Component information not available';
-    // ...existing code for showObjectInfo (copy full implementation if needed)...
-    // This is a stub for modularization; fill in as needed.
-    infoPanel.style.display = 'block';
-    detailsDiv.textContent = objectType + ': ' + objectDetails;
+    
+    // Hide the entire "Selected Object" section to prevent duplication
+    if (infoPanel) {
+        infoPanel.style.display = 'none';
+    }
+    
+    // Log selection for debugging (console only)
+    if (object.userData && object.userData.isInstancedMeshInstance) {
+        console.log('Selected instanced object:', {
+            instanceId: object.userData.instanceId,
+            type: object.userData.type,
+            aisle: object.userData.aisle,
+            level: object.userData.level,
+            module: object.userData.module,
+            depth: object.userData.depth,
+            position: object.userData.position
+        });
+    } else {
+        console.log('Selected object:', object.userData || { name: object.name });
+    }
 }

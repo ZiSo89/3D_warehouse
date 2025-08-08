@@ -1,32 +1,61 @@
 {
   "metadata": {
-    "name": "OSR1 Warehouse Configuration",
-    "created": "2025-07-25T16:45:10.000Z",
+    "name": "warehouse_config",
+    "created": "2025-08-07T01:45:18.718Z",
     "version": "1.0.0",
-    "description": "Configuration based on wh_model_cfg_osr1_example.py for project AT00000"
+    "description": "Exported warehouse configuration"
   },
   "warehouse_parameters": {
-    "aisles": 2,
+    "aisles": 3,
     "levels_per_aisle": [
       10,
-      10
+      5,
+      3
     ],
-    "modules_per_aisle": 7,
+    "modules_per_aisle": 15,
     "locations_per_module": 4,
     "storage_depth": 2,
-    "picking_stations": 2
+    "picking_stations": 3
   },
-  "missing_locations": [],
-  "location_types": {
-    "buffer_locations": [
-      {
-        "aisle": null,
-        "level": null,
-        "module": 1,
-        "depth": null,
-        "position": null,
-        "type": "Buffer"
-      }
-    ]
-  }
+  "missing_locations": [
+    {
+      "aisle": 2,
+      "level": null,
+      "module": 3,
+      "depth": null,
+      "position": null
+    },
+    {
+      "aisle": 1,
+      "level": 4,
+      "module": 3,
+      "depth": 2,
+      "position": 2
+    },
+    {
+      "aisle": 2,
+      "level": 2,
+      "module": 1,
+      "depth": 1,
+      "position": 3
+    }
+  ],
+  "location_types": [
+    {
+      "aisle": null,
+      "level": null,
+      "module": 1,
+      "depth": null,
+      "position": null,
+      "type": "Buffer"
+    },
+    {
+      "aisle": null,
+      "level": null,
+      "module": 4,
+      "depth": null,
+      "position": [1, 2],
+      "type": "Service"
+    }
+  ]
 }

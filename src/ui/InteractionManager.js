@@ -9,9 +9,10 @@ import { getCameraViewConfig, syncLevelsPerAisle } from './uiUtils.js';
 import * as THREE from 'three';
 import { createInteractionPanel, updatePanelText } from './interactionPanel.js';
 import { bindCameraEvents, setCameraPreset, animateCamera } from './cameraControls.js';
-import { getSelectableObjects, filterSelectedObject } from './objectSelectionUtils.js';
+import { getSelectableObjects, filterSelectedObject, showObjectInfo } from './objectSelectionUtils.js';
 import { exportWarehouseConfiguration, importWarehouseConfiguration, validateWarehouseConfiguration } from '../core/warehouseConfigIO.js';
 import { calculateTotalLocations } from '../core/warehouseMetrics.js';
+import { constants } from '../core/constants.js';
 
 export class InteractionManager {
     /**
@@ -190,11 +191,19 @@ export class InteractionManager {
             }
         });
         panel.querySelector('#import-config-btn').addEventListener('click', () => {
-            panel.querySelector('#import-file-input').click();
+            // Reset the file input to allow re-importing the same filename
+            const fileInput = panel.querySelector('#import-file-input');
+            fileInput.value = '';
+            fileInput.click();
         });
         panel.querySelector('#import-file-input').addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                console.log('📁 Importing file:', {
+                    name: file.name,
+                    size: file.size,
+                    lastModified: new Date(file.lastModified).toISOString()
+                });
                 this.showLoadingOverlay();
                 importWarehouseConfiguration(
                     file,
@@ -203,31 +212,39 @@ export class InteractionManager {
                         // Apply the configuration
                         const uiConfig = warehouseConfig.warehouse_parameters;
                         this.sceneManager.missingLocations = warehouseConfig.missing_locations || [];
-                        this.sceneManager.locationTypes = warehouseConfig.location_types || {
-                            buffer_locations: [],
-                            default_type: 'Storage'
-                        };
+                        this.sceneManager.locationTypes = warehouseConfig.location_types || [];
                         // Always use the imported config for the 3D model
                         this.sceneManager.modelConfig = { ...uiConfig };
-                        // Clamp values for UI only (sliders etc.)
-                        const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
-                        const uiClampedConfig = {
-                            aisles: clamp(uiConfig.aisles, 1, 4),
+                        
+                        // For imported configs, use the actual values (don't clamp to UI slider limits)
+                        // This allows importing configs with values beyond the UI slider ranges
+                        const importedConfig = {
+                            aisles: Math.max(1, uiConfig.aisles || 1),
                             levels_per_aisle: Array.isArray(uiConfig.levels_per_aisle)
-                                ? uiConfig.levels_per_aisle.map(lv => clamp(lv, 2, 12)).slice(0, 4)
+                                ? uiConfig.levels_per_aisle.map(lv => Math.max(1, lv))
                                 : [2, 2, 2, 2],
-                            modules_per_aisle: clamp(uiConfig.modules_per_aisle, 3, 8),
-                            locations_per_module: clamp(uiConfig.locations_per_module, 2, 4),
-                            storage_depth: clamp(uiConfig.storage_depth, 1, 3),
-                            picking_stations: clamp(uiConfig.picking_stations, 1, 4),
+                            modules_per_aisle: Math.max(1, uiConfig.modules_per_aisle || 3),
+                            locations_per_module: Math.max(1, uiConfig.locations_per_module || 2),
+                            storage_depth: Math.max(1, uiConfig.storage_depth || 1),
+                            picking_stations: Math.max(1, uiConfig.picking_stations || 1),
                         };
-                        this.uiManager.uiConfig = uiClampedConfig;
+                        this.uiManager.uiConfig = importedConfig;
+                        
+                        console.log('📥 Applied imported config from', file.name, ':', {
+                            aisles: importedConfig.aisles,
+                            levels_per_aisle: importedConfig.levels_per_aisle,
+                            modules_per_aisle: importedConfig.modules_per_aisle,
+                            locations_per_module: importedConfig.locations_per_module,
+                            fileModified: new Date(file.lastModified).toISOString()
+                        });
                         this.updateInputPanelFromConfig(panel);
                         this.uiManager.updateStorageCapacity();
-                        // Build the warehouse with the full imported config (not clamped)
-                        this.sceneManager.buildWarehouse(uiConfig);
+                        // Build the warehouse with the imported config (no clamping)
+                        this.sceneManager.buildWarehouse(importedConfig);
                         setTimeout(() => {
                             this.hideLoadingOverlay();
+                            // Reset file input after successful import to allow re-importing same file
+                            event.target.value = '';
                         }, 400);
                     }
                 );
@@ -270,6 +287,10 @@ export class InteractionManager {
         const container = panel.querySelector('#levels-container');
         // Adjust the levels_per_aisle array using utility
         syncLevelsPerAisle(this.uiManager.uiConfig.levels_per_aisle, aisleCount);
+        
+        // Calculate appropriate max value for level sliders based on imported values
+        const maxLevels = Math.max(12, ...this.uiManager.uiConfig.levels_per_aisle, 50);
+        
         // Clear and rebuild level inputs
         container.innerHTML = '<h4>Levels per Aisle:</h4>';
         for (let i = 0; i < aisleCount; i++) {
@@ -277,7 +298,7 @@ export class InteractionManager {
             levelDiv.className = 'level-input';
             levelDiv.innerHTML = `
                 <label>Aisle ${i + 1}:</label>
-                <input type="range" min="2" max="12" value="${this.uiManager.uiConfig.levels_per_aisle[i]}" data-aisle="${i}">
+                <input type="range" min="2" max="${maxLevels}" value="${this.uiManager.uiConfig.levels_per_aisle[i]}" data-aisle="${i}">
                 <span>${this.uiManager.uiConfig.levels_per_aisle[i]}</span>
             `;
             container.appendChild(levelDiv);
@@ -292,6 +313,8 @@ export class InteractionManager {
                 this.uiManager.updateStorageCapacity();
             });
         }
+        
+        console.log('📊 Updated level sliders with max:', maxLevels, 'for values:', this.uiManager.uiConfig.levels_per_aisle);
     }
 
     /**
@@ -305,6 +328,9 @@ export class InteractionManager {
      * @param {HTMLElement} panel - The DOM element containing the input panel controls.
      */
     updateInputPanelFromConfig(panel) {
+        // Update slider ranges to accommodate imported values
+        this.updateSliderRanges(panel);
+        
         // Update all slider values and displays
         panel.querySelector('#aisles').value = this.uiManager.uiConfig.aisles;
         panel.querySelector('#aisles-value').textContent = this.uiManager.uiConfig.aisles;
@@ -318,6 +344,52 @@ export class InteractionManager {
         panel.querySelector('#stations-value').textContent = this.uiManager.uiConfig.picking_stations;
         // Update level inputs
         this.updateLevelInputs(panel);
+    }
+
+    /**
+     * Updates slider ranges to accommodate imported configuration values.
+     * @param {HTMLElement} panel - The DOM element containing the input panel controls.
+     */
+    updateSliderRanges(panel) {
+        const config = this.uiManager.uiConfig;
+        
+        // Update aisles slider (default max: 4)
+        const aislesSlider = panel.querySelector('#aisles');
+        if (config.aisles > parseInt(aislesSlider.max)) {
+            aislesSlider.max = Math.max(config.aisles, 10);
+        }
+        
+        // Update modules slider (default max: 8)
+        const modulesSlider = panel.querySelector('#modules');
+        if (config.modules_per_aisle > parseInt(modulesSlider.max)) {
+            modulesSlider.max = Math.max(config.modules_per_aisle, 50);
+        }
+        
+        // Update locations slider (default max: 4)
+        const locationsSlider = panel.querySelector('#locations');
+        if (config.locations_per_module > parseInt(locationsSlider.max)) {
+            locationsSlider.max = Math.max(config.locations_per_module, 10);
+        }
+        
+        // Update depth slider (default max: 3)
+        const depthSlider = panel.querySelector('#depth');
+        if (config.storage_depth > parseInt(depthSlider.max)) {
+            depthSlider.max = Math.max(config.storage_depth, 5);
+        }
+        
+        // Update stations slider (default max: 4)
+        const stationsSlider = panel.querySelector('#stations');
+        if (config.picking_stations > parseInt(stationsSlider.max)) {
+            stationsSlider.max = Math.max(config.picking_stations, 10);
+        }
+        
+        console.log('📊 Updated slider ranges for imported config:', {
+            aisles: aislesSlider.max,
+            modules: modulesSlider.max,
+            locations: locationsSlider.max,
+            depth: depthSlider.max,
+            stations: stationsSlider.max
+        });
     }
 
 
@@ -371,10 +443,17 @@ export class InteractionManager {
 
         // Select new object
         this.selectedObject = object;
-        this.originalMaterial = object.material;
-        // Apply highlight effect
-        if (object.material.type !== 'MeshBasicMaterial' || !object.material.wireframe) {
-            object.material = this.highlightMaterial;
+        
+        // Handle instanced mesh highlighting differently
+        if (object.userData && object.userData.isInstancedMeshInstance) {
+            this.highlightInstancedMesh(object);
+        } else {
+            // Regular mesh highlighting
+            this.originalMaterial = object.material;
+            // Apply highlight effect
+            if (object.material && (object.material.type !== 'MeshBasicMaterial' || !object.material.wireframe)) {
+                object.material = this.highlightMaterial;
+            }
         }
 
         // Special handling for shuttle - trigger arm animation
@@ -396,7 +475,10 @@ export class InteractionManager {
             // Could add lift animation here in the future
         }
 
-        // No object info panel in warehouse model
+        // Show object info for the selected object
+        if (typeof showObjectInfo === 'function') {
+            showObjectInfo(object);
+        }
 
         // Log selection to UIManager's log panel with userData details
         if (this.uiManager && typeof this.uiManager.addLog === 'function') {
@@ -407,9 +489,35 @@ export class InteractionManager {
             let label = 'Object selected';
             if (object.userData && Object.keys(object.userData).length > 0) {
                 const incrementKeys = ['aisle', 'level', 'module', 'depth', 'position'];
+                
+                // Handle instanced mesh instances
+                if (object.userData.isInstancedMeshInstance) {
+                    const locationData = {
+                        aisle: object.userData.aisle,
+                        level: object.userData.level,
+                        module: object.userData.module,
+                        depth: object.userData.depth,
+                        position: object.userData.position
+                    };
+                    
+                    // Show location type and details without mentioning "Instanced Location" or instance ID
+                    const locationType = object.userData.type || 'Storage';
+                    label = `${locationType} Location`;
+                    
+                    const details = incrementKeys
+                        .filter(k => typeof locationData[k] === 'number')
+                        .map(k => {
+                            const val = locationData[k];
+                            return `<div style='margin-left:10px;'><strong>${k}:</strong> ${val === -1 ? '-' : val + 1}</div>`;
+                        })
+                        .join('');
+                    if (details) {
+                        label += '<br>' + details;
+                    }
+                }
                 // Special case: Missing Location
-                if (
-                    (object.userData.location_type === 'Missing Location' || object.userData.type === 'Missing Location') &&
+                else if (
+                    (object.userData.location_type === 'Missing' || object.userData.type === 'Missing') &&
                     object.userData.status === 'Unavailable'
                 ) {
                     // Only show incremented aisle, level, module, depth, position
@@ -420,7 +528,7 @@ export class InteractionManager {
                             return `<div style='margin-left:10px;'><strong>${k}:</strong> ${val === -1 ? '-' : val + 1}</div>`;
                         })
                         .join('');
-                    label = `Selected: <strong>Missing Location</strong>${details}`;
+                    label = `Selected: <strong>Missing</strong>${details}`;
                 } else if (
                     object.userData.type === 'Buffer' || object.userData.location_type === 'Buffer'
                 ) {
@@ -535,6 +643,218 @@ export class InteractionManager {
      */
     bindCameraEvents() {
         bindCameraEvents((presetName) => setCameraPreset(this.sceneManager, this.uiManager, presetName));
+    }
+
+    /**
+     * Special highlighting for instanced meshes
+     * @param {Object} instanceObject - The virtual instance object
+     */
+    highlightInstancedMesh(instanceObject) {
+        const originalMesh = instanceObject.userData.originalMesh;
+        const instanceId = instanceObject.userData.instanceId;
+        
+        // Store original state for restoration
+        this.originalMaterial = originalMesh.material;
+        this.selectedInstanceId = instanceId;
+        this.isInstancedSelection = true;
+        
+        // Create a temporary highlight material for the specific instance
+        const highlightMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.7
+        });
+        
+        // For instanced meshes, we can't change individual instance materials
+        // So we'll create a visual indicator instead
+        this.createInstanceHighlight(instanceObject);
+    }
+
+    /**
+     * Create a visual highlight for a specific instance
+     * @param {Object} instanceObject - The virtual instance object
+     */
+    createInstanceHighlight(instanceObject) {
+        if (this.instanceHighlight) {
+            this.sceneManager.scene.remove(this.instanceHighlight);
+            this.instanceHighlight.geometry.dispose();
+            this.instanceHighlight.material.dispose();
+        }
+        
+        const originalMesh = instanceObject.userData.originalMesh;
+        const instanceId = instanceObject.userData.instanceId;
+        
+        // Get the exact world position of this instance
+        const matrix = new THREE.Matrix4();
+        originalMesh.getMatrixAt(instanceId, matrix);
+        
+        // Apply parent transformations to get world coordinates
+        const worldMatrix = new THREE.Matrix4();
+        worldMatrix.multiplyMatrices(originalMesh.matrixWorld, matrix);
+        
+        // Extract the center position of the instance
+        const position = new THREE.Vector3();
+        const quaternion = new THREE.Quaternion();
+        const scale = new THREE.Vector3();
+        worldMatrix.decompose(position, quaternion, scale);
+        
+        console.log('Instance world position:', position);
+        console.log('Intersection point was:', instanceObject.instancePosition);
+        
+        // Determine the appropriate size based on the object type
+        let width, height, depth;
+        
+        console.log('Original mesh info:', {
+            isInstancedRack: originalMesh.userData.isInstancedRack,
+            name: originalMesh.name,
+            userData: originalMesh.userData
+        });
+        
+        // Check if this is a rack location or frame
+        if (originalMesh.userData.isInstancedRack) {
+            // This is a storage location - use location dimensions
+            width = constants.locationLength;
+            height = constants.levelHeight;
+            depth = constants.locationDepth;
+            console.log('Using storage location dimensions');
+        } else if (originalMesh.name && originalMesh.name.includes('frame')) {
+            // This is a rack frame - use frame dimensions
+            width = constants.modulePostSize;
+            height = constants.levelHeight * 2; // Frames are taller
+            depth = constants.modulePostSize;
+            console.log('Using frame dimensions');
+        } else {
+            // Default to location size for unknown objects
+            width = constants.locationLength;
+            height = constants.levelHeight;
+            depth = constants.locationDepth;
+            console.log('Using default location dimensions');
+        }
+        
+        console.log('Constants values:', {
+            locationLength: constants.locationLength,
+            levelHeight: constants.levelHeight,
+            locationDepth: constants.locationDepth
+        });
+        
+        // Instead of using constants, get the actual geometry dimensions
+        const originalGeometry = originalMesh.geometry;
+        if (originalGeometry && originalGeometry.boundingBox) {
+            originalGeometry.computeBoundingBox();
+        }
+        
+        let actualWidth, actualHeight, actualDepth;
+        
+        if (originalGeometry && originalGeometry.boundingBox) {
+            const box = originalGeometry.boundingBox;
+            actualWidth = box.max.x - box.min.x;
+            actualHeight = box.max.y - box.min.y;
+            actualDepth = box.max.z - box.min.z;
+            
+            console.log('Using actual geometry dimensions:', {
+                width: actualWidth,
+                height: actualHeight,
+                depth: actualDepth
+            });
+            
+            width = actualWidth;
+            height = actualHeight;
+            depth = actualDepth;
+        } else {
+            console.log('No bounding box available, using constants');
+            // Fallback to constants if no bounding box
+            width = constants.locationLength;
+            height = constants.levelHeight;
+            depth = constants.locationDepth;
+        }
+        
+        // Make the highlight just slightly larger for visibility
+        const highlightGeometry = new THREE.BoxGeometry(
+            width * 1.05,  // Very small increase
+            height * 1.05, 
+            depth * 1.05
+        );
+        
+        console.log('Final highlight dimensions:', {
+            width: width * 1.05,
+            height: height * 1.05, 
+            depth: depth * 1.05,
+            source: originalGeometry && originalGeometry.boundingBox ? 'geometry' : 'constants'
+        });
+        
+        const highlightMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            wireframe: true,
+            linewidth: 3,
+            transparent: true,
+            opacity: 0.9
+        });
+        
+        this.instanceHighlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
+        
+        // Position the highlight at the exact center of the instance
+        this.instanceHighlight.position.copy(position);
+        
+        // Don't copy the quaternion rotation - keep it aligned with world axes
+        // This prevents the highlight from being rotated incorrectly
+        this.instanceHighlight.rotation.set(0, 0, 0);
+        
+        this.instanceHighlight.userData.isHighlight = true;
+        
+        console.log('Creating highlight centered at:', position);
+        console.log('Without rotation (world-aligned)');
+        
+        this.sceneManager.scene.add(this.instanceHighlight);
+    }
+
+    /**
+     * Enhanced deselection to handle instanced meshes
+     */
+    deselectObject() {
+        if (this.selectedObject) {
+            // Handle instanced mesh deselection
+            if (this.isInstancedSelection && this.instanceHighlight) {
+                this.sceneManager.scene.remove(this.instanceHighlight);
+                this.instanceHighlight.geometry.dispose();
+                this.instanceHighlight.material.dispose();
+                this.instanceHighlight = null;
+                this.isInstancedSelection = false;
+                this.selectedInstanceId = null;
+            }
+            // Handle regular mesh deselection
+            else if (this.originalMaterial) {
+                // Dispose highlight material to avoid memory leaks
+                if (this.selectedObject.material && this.selectedObject.material.dispose) {
+                    this.selectedObject.material.dispose();
+                }
+                // Check if the object is still present in the scene before restoring material
+                let isInScene = false;
+                if (this.selectedObject.parent) {
+                    let obj = this.selectedObject;
+                    while (obj.parent) {
+                        if (obj.parent === this.sceneManager.scene) {
+                            isInScene = true;
+                            break;
+                        }
+                        obj = obj.parent;
+                    }
+                }
+                // Restore material only if object is still in scene
+                if (isInScene) {
+                    this.selectedObject.material = this.originalMaterial;
+                }
+            }
+        }
+        
+        // Reset state
+        this.selectedObject = null;
+        this.originalMaterial = null;
+        
+        // Hide object info panel
+        const infoPanel = document.getElementById('object-info');
+        if (infoPanel) {
+            infoPanel.style.display = 'none';
+        }
     }
 
     /**

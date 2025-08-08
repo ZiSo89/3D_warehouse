@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { createOrientationLabels, createCompass, updateCompassPosition } from './sceneCompass.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createRacks } from '../components/createRacks.js';
+import { createRacksInstanced } from '../components/createRacksInstanced.js';
 import { createPrezone } from '../components/createPrezone.js';
+import { AdvancedLODManager } from './AdvancedLODManager.js';
 //import { createShuttle, createLift } from '../components/createTransporters.js';
 import { AnimationManager } from '../animation/AnimationManager.js';
 import { constants } from './constants.js';
@@ -10,6 +12,7 @@ import { setupLighting, createGroundPlane } from './sceneLighting.js';
 import { exportWarehouseConfiguration, importWarehouseConfiguration, validateWarehouseConfiguration } from './warehouseConfigIO.js';
 import { updateMissingLocations, addMissingLocation, clearMissingLocations, getLocationType, addBufferLocation, clearBufferLocations } from './locationUtils.js';
 import { calculateTotalLocations } from './warehouseMetrics.js';
+import { getCameraViewConfig } from '../ui/uiUtils.js';
 
 export class SceneManager {
     /**
@@ -30,20 +33,70 @@ export class SceneManager {
         this.warehouseGroup = new THREE.Group();
         this.animationManager = new AnimationManager(this);
         this.scene.add(this.warehouseGroup);
-        this.missingLocations = [
-            { aisle: 1, level: 2, module: 3, depth: 0, position: 1 },
-            { aisle: [0, 1], level: [3, 4], module: 2, depth: null, position: 0 },
-            { aisle: 2, level: null, module: 7, depth: null, position: null }
-        ];
-        this.locationTypes = {
-            buffer_locations: [
-                { aisle: null, level: null, module: [0, 0], depth: [0, 1], position: null, type: 'Buffer' }
-            ],
-            default_type: 'Storage'
-        };
+        this.useInstancedRendering = true; // Enable instanced rendering by default
+        
+        // Initialize Advanced LOD Manager
+        this.lodManager = new AdvancedLODManager();
+        this.useLOD = true; // Enable LOD by default
+        
+        this.missingLocations = [];
+        this.locationTypes = [];
+        this.currentConfig = null; // Store current warehouse configuration
+        
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         // Bind animate method once to always preserve 'this'
         this.animate = this.animate.bind(this);
+    }
+
+    /**
+     * Load default configuration from warehouse_config_instance.json
+     */
+    async loadDefaultConfiguration() {
+        try {
+            const response = await fetch('./warehouse_config_instance.json');
+            if (response.ok) {
+                const config = await response.json();
+                
+                // Convert 1-based indices to 0-based for internal use
+                this.missingLocations = this.convertToZeroBased(config.missing_locations || []);
+                this.locationTypes = this.convertToZeroBased(config.location_types || []);
+                
+                console.log('Loaded default configuration with 1-based to 0-based conversion:', {
+                    missingLocations: this.missingLocations.length,
+                    locationTypes: this.locationTypes.length,
+                    sampleLocationTypes: this.locationTypes.slice(0, 2)
+                });
+            } else {
+                console.warn('Could not load default configuration from warehouse_config_instance.json');
+            }
+        } catch (error) {
+            console.warn('Error loading default configuration:', error);
+        }
+    }
+
+    /**
+     * Convert 1-based indices to 0-based for internal use
+     */
+    convertToZeroBased(locationArray) {
+        if (!Array.isArray(locationArray)) return [];
+        
+        return locationArray.map(loc => {
+            if (loc && typeof loc === 'object') {
+                const newLoc = { ...loc };
+                ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
+                    if (typeof newLoc[key] === 'number') {
+                        newLoc[key] = newLoc[key] - 1;
+                    } else if (Array.isArray(newLoc[key])) {
+                        // Convert arrays from 1-based to 0-based
+                        newLoc[key] = newLoc[key].map(val => 
+                            typeof val === 'number' ? val - 1 : val
+                        );
+                    }
+                });
+                return newLoc;
+            }
+            return loc;
+        });
     }
 
     /**
@@ -67,17 +120,45 @@ export class SceneManager {
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
 
-        // Fit camera to show the 3D warehouse (not just ground)
-        // Use bounding box size to determine distance
-        const fitOffset = 0.8; // Zoom in closer to the warehouse
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const camDistance = maxDim * fitOffset;
-        // Place camera diagonally above and back, looking at warehouse center
-        this.camera.position.set(center.x + camDistance, center.y + camDistance * 0.6, center.z + camDistance);
-        this.camera.lookAt(center);
-        if (this.controls) {
-            this.controls.target.copy(center);
-            this.controls.update();
+        // Use overview camera position on initial load
+        if (this.currentConfig) {
+            const overviewConfig = getCameraViewConfig('overview', this.currentConfig);
+            this.camera.position.set(
+                overviewConfig.position.x, 
+                overviewConfig.position.y, 
+                overviewConfig.position.z
+            );
+            this.camera.lookAt(
+                overviewConfig.target.x, 
+                overviewConfig.target.y, 
+                overviewConfig.target.z
+            );
+            
+            if (this.controls) {
+                this.controls.target.set(
+                    overviewConfig.target.x, 
+                    overviewConfig.target.y, 
+                    overviewConfig.target.z
+                );
+                this.controls.update();
+            }
+            
+            console.log('📷 Camera positioned to overview:', {
+                position: overviewConfig.position,
+                target: overviewConfig.target
+            });
+        } else {
+            // Fallback to original behavior if no config available
+            const fitOffset = 0.8;
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const camDistance = maxDim * fitOffset;
+            this.camera.position.set(center.x + camDistance, center.y + camDistance * 0.6, center.z + camDistance);
+            this.camera.lookAt(center);
+            if (this.controls) {
+                this.controls.target.copy(center);
+                this.controls.update();
+            }
+            console.log('📷 Camera positioned using fallback method');
         }
 
         this.scene.background = new THREE.Color(0xf1faee); // Light cream from palette
@@ -105,7 +186,21 @@ export class SceneManager {
             TWEEN.update();
         }
 
-        // --- Virtualization: Frustum culling + distance-based visibility for racks ---
+        // Use Enhanced LOD Manager for performance optimization
+        if (this.useLOD && this.lodManager) {
+            this.lodManager.updateLOD(this.camera, this.scene, true);
+        } else {
+            // Fallback to legacy frustum culling
+            this.legacyFrustumCulling();
+        }
+
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    /**
+     * Legacy frustum culling for backward compatibility
+     */
+    legacyFrustumCulling() {
         if (this.warehouseGroup && this.warehouseGroup.children.length > 0) {
             const frustum = new THREE.Frustum();
             const cameraViewProjectionMatrix = new THREE.Matrix4();
@@ -113,12 +208,11 @@ export class SceneManager {
             this.camera.updateProjectionMatrix();
             cameraViewProjectionMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
             frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
+            
             this.warehouseGroup.children.forEach(child => {
-                // If this is the racksGroup, check its children for rackLines
                 if (child.type === 'Group' && child.children) {
                     child.children.forEach(grandchild => {
                         if (grandchild.userData && grandchild.userData.isRackLine) {
-                            // Compute distance from camera to rackLine center
                             const rackPos = new THREE.Vector3();
                             grandchild.getWorldPosition(rackPos);
                             const camPos = this.camera.position;
@@ -135,7 +229,6 @@ export class SceneManager {
                         }
                     });
                 }
-                // Fallback: normal frustum culling for other objects
                 if (child.isMesh && child.geometry && child.geometry.boundingSphere) {
                     try {
                         child.visible = frustum.intersectsObject(child);
@@ -147,18 +240,23 @@ export class SceneManager {
                 }
             });
         }
-
-        this.renderer.render(this.scene, this.camera);
     }
 
 
     buildWarehouse(uiConfig) {
+        // Store the current configuration
+        this.currentConfig = { ...uiConfig };
+        
         // Clear previous warehouse completely
         while (this.warehouseGroup.children.length > 0) {
             this.warehouseGroup.remove(this.warehouseGroup.children[0]);
         }
 
-        const racks = createRacks(uiConfig, constants, this.missingLocations, this.locationTypes);
+        // Use instanced rendering for better performance
+        const racks = this.useInstancedRendering 
+            ? createRacksInstanced(uiConfig, constants, this.missingLocations, this.locationTypes)
+            : createRacks(uiConfig, constants, this.missingLocations, this.locationTypes);
+        
         this.warehouseGroup.add(racks);
 
         const prezone = createPrezone(uiConfig, constants);
@@ -177,6 +275,8 @@ export class SceneManager {
 
         // Update compass position after warehouse is rebuilt
         updateCompassPosition(this.compassGroup, this.warehouseGroup);
+        
+        console.log(`Warehouse built with ${this.useInstancedRendering ? 'instanced' : 'regular'} rendering`);
     }
 
     updateTheme(isDark) {
@@ -188,6 +288,54 @@ export class SceneManager {
             // Light theme  
             this.scene.background = new THREE.Color(0xf1faee); // Light cream
             this.scene.fog = new THREE.Fog(0xf1faee, 50, 100);
+        }
+    }
+
+    /**
+     * Toggle between instanced and regular rendering
+     */
+    toggleInstancedRendering(enabled) {
+        this.useInstancedRendering = enabled;
+        console.log(`Instanced rendering ${enabled ? 'enabled' : 'disabled'}`);
+    }
+
+    /**
+     * Get current rendering mode
+     */
+    isInstancedRenderingEnabled() {
+        return this.useInstancedRendering;
+    }
+
+    /**
+     * Toggle LOD system
+     */
+    toggleLOD(enabled) {
+        this.useLOD = enabled;
+        console.log(`LOD system ${enabled ? 'enabled' : 'disabled'}`);
+    }
+
+    /**
+     * Set LOD level manually
+     */
+    setLODLevel(level) {
+        if (this.lodManager) {
+            this.lodManager.forceLOD(level);
+        }
+    }
+
+    /**
+     * Get LOD performance report
+     */
+    getLODStats() {
+        return this.lodManager ? this.lodManager.getPerformanceReport() : null;
+    }
+
+    /**
+     * Enable/disable automatic LOD optimization
+     */
+    setAutoLOD(enabled) {
+        if (this.lodManager) {
+            this.lodManager.setAutoOptimization(enabled);
         }
     }
 

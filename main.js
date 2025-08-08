@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SceneManager } from './src/core/SceneManager.js';
 import { UIManager } from './src/ui/UIManager.js';
 import { InteractionManager } from './src/ui/InteractionManager.js';
+import { PerformanceMonitorUI } from './src/ui/PerformanceMonitorUI.js';
 
 
 const sceneManager = new SceneManager();
@@ -12,16 +13,58 @@ canvas.setAttribute('tabindex', '0');
 canvas.style.outline = 'none';
 document.body.appendChild(canvas);
 setTimeout(() => { canvas.focus(); }, 100);
+
 // Initialize UI Manager
 const uiManager = new UIManager(sceneManager);
 
 // Initialize Interaction Manager
 const interactionManager = new InteractionManager(sceneManager, uiManager);
 
-// Build initial warehouse with UI config
-sceneManager.buildWarehouse(uiManager.getConfig());
+// Initialize Performance Monitor
+const performanceMonitor = new PerformanceMonitorUI(sceneManager);
 
-sceneManager.fitToWarehouseView();
+// Build initial warehouse with UI config - wait for configuration to load
+const initializeWarehouse = async () => {
+    // Wait for default configuration to load
+    if (sceneManager.loadDefaultConfiguration) {
+        await sceneManager.loadDefaultConfiguration();
+    }
+    sceneManager.buildWarehouse(uiManager.getConfig());
+    sceneManager.fitToWarehouseView();
+};
+
+initializeWarehouse();
+
+// Add keyboard shortcuts for testing
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'i' || event.key === 'I') {
+        // Toggle instanced rendering
+        const current = sceneManager.isInstancedRenderingEnabled();
+        sceneManager.toggleInstancedRendering(!current);
+        sceneManager.buildWarehouse(uiManager.getConfig());
+        console.log(`🔄 Rendering mode switched to: ${!current ? 'Instanced' : 'Regular'}`);
+        console.log('💡 Now try selecting objects to see the difference');
+    }
+    if (event.key === 'h' || event.key === 'H') {
+        // Show help
+        console.log('🎮 Keyboard shortcuts:');
+        console.log('  I - Toggle between Instanced and Regular rendering');
+        console.log('  P - Toggle performance monitor');
+        console.log('  C - Log camera position');
+        console.log('  H - Show this help');
+    }
+});
+
+console.log('🚀 Warehouse 3D Model loaded with performance optimizations!');
+console.log('📊 Press "P" to toggle performance monitor');
+console.log('🔄 Press "I" to toggle between Instanced/Regular rendering');
+console.log('❓ Press "H" for all keyboard shortcuts');
+console.log('🎯 Optimizations active:');
+console.log('  • Instanced Rendering: Reduces draw calls');
+console.log('  • 3-Level LOD System: Automatic quality adjustment');
+console.log('  • Texture Atlasing: Optimized materials');
+console.log('  • Advanced Frustum Culling: Spatial partitioning');
+console.log('📍 Click on objects to select them - instanced objects show detailed info');
 
 // === Game-like Keyboard Navigation ===
 // WASD/Arrow keys: move camera target, Q/E: up/down, R/F: zoom in/out, C: log camera position

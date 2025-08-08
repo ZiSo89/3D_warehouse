@@ -24,12 +24,17 @@ export function exportWarehouseConfiguration(uiConfig, missingLocations, locatio
         return loc;
     });
 
-    const convertedBufferLocations = locationTypes.buffer_locations.map(loc => {
+    const convertedLocationTypes = (Array.isArray(locationTypes) ? locationTypes : []).map(loc => {
         if (loc && typeof loc === 'object') {
             const newLoc = { ...loc };
             ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
                 if (typeof newLoc[key] === 'number' && newLoc[key] !== -1) {
                     newLoc[key] = newLoc[key] + 1;
+                } else if (Array.isArray(newLoc[key])) {
+                    // Convert arrays from 0-based to 1-based
+                    newLoc[key] = newLoc[key].map(val => 
+                        typeof val === 'number' && val !== -1 ? val + 1 : val
+                    );
                 }
             });
             return newLoc;
@@ -53,10 +58,7 @@ export function exportWarehouseConfiguration(uiConfig, missingLocations, locatio
             picking_stations: uiConfig.picking_stations
         },
         missing_locations: [...convertedMissingLocations],
-        location_types: {
-            buffer_locations: [...convertedBufferLocations],
-            default_type: locationTypes.default_type
-        },
+        location_types: [...convertedLocationTypes],
         calculated_metrics: {
             total_locations: calculateTotalLocations(uiConfig, missingLocations),
             total_modules: uiConfig.aisles * uiConfig.modules_per_aisle,
@@ -98,6 +100,16 @@ export function importWarehouseConfiguration(jsonFile, validateWarehouseConfigur
     reader.onload = (event) => {
         try {
             const warehouseConfig = JSON.parse(event.target.result);
+            
+            // Log the imported configuration details
+            console.log('📋 Import details:', {
+                filename: jsonFile.name,
+                fileSize: jsonFile.size,
+                lastModified: new Date(jsonFile.lastModified).toISOString(),
+                configParams: warehouseConfig.warehouse_parameters,
+                metadata: warehouseConfig.metadata
+            });
+            
             if (!validateWarehouseConfiguration(warehouseConfig)) {
                 throw new Error('Invalid warehouse configuration format');
             }
@@ -111,6 +123,11 @@ export function importWarehouseConfiguration(jsonFile, validateWarehouseConfigur
                         ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
                             if (typeof newLoc[key] === 'number') {
                                 newLoc[key] = newLoc[key] - 1;
+                            } else if (Array.isArray(newLoc[key])) {
+                                // Convert arrays from 1-based to 0-based
+                                newLoc[key] = newLoc[key].map(val => 
+                                    typeof val === 'number' ? val - 1 : val
+                                );
                             }
                         });
                         return newLoc;
@@ -120,14 +137,19 @@ export function importWarehouseConfiguration(jsonFile, validateWarehouseConfigur
             }
             if (
                 warehouseConfig.location_types &&
-                Array.isArray(warehouseConfig.location_types.buffer_locations)
+                Array.isArray(warehouseConfig.location_types)
             ) {
-                warehouseConfig.location_types.buffer_locations = warehouseConfig.location_types.buffer_locations.map(loc => {
+                warehouseConfig.location_types = warehouseConfig.location_types.map(loc => {
                     if (loc && typeof loc === 'object') {
                         const newLoc = { ...loc };
                         ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
                             if (typeof newLoc[key] === 'number') {
                                 newLoc[key] = newLoc[key] - 1;
+                            } else if (Array.isArray(newLoc[key])) {
+                                // Convert arrays from 1-based to 0-based
+                                newLoc[key] = newLoc[key].map(val => 
+                                    typeof val === 'number' ? val - 1 : val
+                                );
                             }
                         });
                         return newLoc;

@@ -29,9 +29,17 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                 missing.level.includes(level) : 
                 (missing.level === null || missing.level === level);
             
-            const moduleMatch = missing.module === null || missing.module === module;
-            const depthMatch = missing.depth === null || missing.depth === depth;
-            const positionMatch = missing.position === null || missing.position === position;
+            const moduleMatch = Array.isArray(missing.module) ?
+                missing.module.includes(module) :
+                (missing.module === null || missing.module === module);
+                
+            const depthMatch = Array.isArray(missing.depth) ?
+                missing.depth.includes(depth) :
+                (missing.depth === null || missing.depth === depth);
+                
+            const positionMatch = Array.isArray(missing.position) ?
+                missing.position.includes(position) :
+                (missing.position === null || missing.position === position);
             
             return aisleMatch && levelMatch && moduleMatch && depthMatch && positionMatch;
         });
@@ -39,34 +47,34 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
 
     // Helper function to get location type
     const getLocationType = (aisle, level, module, depth, position) => {
-        if (!locationTypes) return 'Storage';
+        if (!locationTypes || !Array.isArray(locationTypes)) return 'Storage';
 
-        // Check if location matches any buffer location definition
-        const bufferMatch = locationTypes.buffer_locations.find(buffer => {
-            const aisleMatch = Array.isArray(buffer.aisle) ? 
-                buffer.aisle.includes(aisle) : 
-                (buffer.aisle === null || buffer.aisle === aisle);
+        // Check if location matches any location type definition
+        const typeMatch = locationTypes.find(locType => {
+            const aisleMatch = Array.isArray(locType.aisle) ? 
+                locType.aisle.includes(aisle) : 
+                (locType.aisle === null || locType.aisle === aisle);
 
-            const levelMatch = Array.isArray(buffer.level) ? 
-                buffer.level.includes(level) : 
-                (buffer.level === null || buffer.level === level);
+            const levelMatch = Array.isArray(locType.level) ? 
+                locType.level.includes(level) : 
+                (locType.level === null || locType.level === level);
 
-            const moduleMatch = Array.isArray(buffer.module) ? 
-                buffer.module.includes(module) : 
-                (buffer.module === null || buffer.module === module);
+            const moduleMatch = Array.isArray(locType.module) ? 
+                locType.module.includes(module) : 
+                (locType.module === null || locType.module === module);
 
-            const depthMatch = Array.isArray(buffer.depth) ? 
-                buffer.depth.includes(depth) : 
-                (buffer.depth === null || buffer.depth === depth);
+            const depthMatch = Array.isArray(locType.depth) ? 
+                locType.depth.includes(depth) : 
+                (locType.depth === null || locType.depth === depth);
 
-            const positionMatch = Array.isArray(buffer.position) ? 
-                buffer.position.includes(position) : 
-                (buffer.position === null || buffer.position === position);
+            const positionMatch = Array.isArray(locType.position) ? 
+                locType.position.includes(position) : 
+                (locType.position === null || locType.position === position);
 
             return aisleMatch && levelMatch && moduleMatch && depthMatch && positionMatch;
         });
 
-        return bufferMatch ? (bufferMatch.type || 'Buffer') : locationTypes.default_type;
+        return typeMatch ? typeMatch.type : 'Storage';
     };
 
     const moduleLength = uiConfig.locations_per_module * constants.locationLength;
@@ -204,7 +212,7 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
                                         module: m,
                                         depth: d,
                                         position: s,
-                                        location_type: 'Missing Location',
+                                        location_type: 'Missing',
                                         status: 'Unavailable'
                                     };
                                     moduleGroup.add(missingBox);

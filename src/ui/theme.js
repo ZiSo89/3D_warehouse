@@ -32,19 +32,25 @@ export const UI_THEME = {
 // Centralized color map for location types (used in createRacks.js and elsewhere)
 export const LOCATION_TYPE_COLORS = {
     Buffer: 0xbc6c25, // theme toggleHover (orange)
+    Service: 0x9c27b0, // Purple for service locations
+    'Server position': 0xff5722, // Deep orange for server positions
+    Pick: 0x2196f3, // Blue for pick locations
+    Replenishment: 0x4caf50, // Green for replenishment
+    'Missing': 0xff0000, // Red for missing locations
     StorageEven: 0x6e9075, // theme green
     StorageOdd: 0x9ca3af // muted grey
 };
 
 // Helper to get color/emissive for a location type
 export function getLocationTypeColor(type, depth) {
-    if (type === 'Buffer') {
+    // Check if we have a specific color for this type
+    if (LOCATION_TYPE_COLORS[type]) {
         return {
-            color: LOCATION_TYPE_COLORS.Buffer,
-            emissive: LOCATION_TYPE_COLORS.Buffer,
-            emissiveIntensity: 0.45
+            color: LOCATION_TYPE_COLORS[type],
+            emissive: LOCATION_TYPE_COLORS[type],
+            emissiveIntensity: type === 'Missing' ? 0.3 : 0.45
         };
-    } else {
+    } else if (type === 'Storage') {
         // Storage: alternate color by depth
         const even = (depth % 2 === 0);
         return {
@@ -52,5 +58,45 @@ export function getLocationTypeColor(type, depth) {
             emissive: 0x000000,
             emissiveIntensity: 0.0
         };
+    } else {
+        // Unknown type: generate a consistent color based on type name
+        console.log(`Generating dynamic color for location type: "${type}"`);
+        
+        // Create a better hash function for consistent colors
+        let hash = 0;
+        for (let i = 0; i < type.length; i++) {
+            hash = ((hash << 5) - hash + type.charCodeAt(i)) & 0xffffffff;
+        }
+        
+        // Convert hash to a vibrant color
+        const hue = Math.abs(hash) % 360;
+        const saturation = 70 + (Math.abs(hash >> 8) % 30); // 70-100%
+        const lightness = 45 + (Math.abs(hash >> 16) % 20); // 45-65%
+        
+        // Convert HSL to RGB
+        const color = hslToHex(hue, saturation, lightness);
+        
+        console.log(`Generated color for "${type}": #${color.toString(16).padStart(6, '0')}`);
+        
+        return {
+            color: color,
+            emissive: color,
+            emissiveIntensity: 0.4
+        };
     }
+}
+
+// Helper function to convert HSL to RGB hex
+function hslToHex(h, s, l) {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color);
+    };
+    const r = f(0);
+    const g = f(8);
+    const b = f(4);
+    return (r << 16) | (g << 8) | b;
 }

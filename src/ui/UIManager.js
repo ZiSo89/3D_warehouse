@@ -391,7 +391,7 @@ export class UIManager {
         
         // Get missing locations and location types from SceneManager
         const missingLocations = this.sceneManager.missingLocations || [];
-        const locationTypes = this.sceneManager.locationTypes || { buffer_locations: [], default_type: 'Storage' };
+        const locationTypes = this.sceneManager.locationTypes || [];
         
         // Helper function to check if a location is missing
         const isLocationMissing = (aisle, level, module, depth, position) => {

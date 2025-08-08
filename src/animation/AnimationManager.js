@@ -81,7 +81,6 @@ export class AnimationManager {
             reflectivity: 0.7,
             transmission: 0.0,
             ior: 1.45,
-            thickness: 0.1,
             emissive: 0x0a0a1a,
             emissiveIntensity: 0.18,
             map: metalTexture || null
@@ -686,7 +685,6 @@ export class AnimationManager {
                     reflectivity: 0.7,
                     transmission: 0.0,
                     ior: 1.45,
-                    thickness: 0.1,
                     emissive: 0x220000,
                     emissiveIntensity: 0.22,
                     map: metalTexture || null
@@ -741,7 +739,6 @@ export class AnimationManager {
                 reflectivity: 0.8,
                 transmission: 0.0,
                 ior: 1.45,
-                thickness: 0.1,
                 emissive: 0x222200,
                 emissiveIntensity: 0.18,
                 map: metalTexture || null
