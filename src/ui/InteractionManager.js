@@ -150,39 +150,6 @@ export class InteractionManager {
         // Dynamic level inputs
         this.updateLevelInputs(panel);
 
-        // Animation toggle
-        const toggleBtn = panel.querySelector('#toggle-animation-btn');
-        let isAnimating = false;
-        const animationManager = this.sceneManager.animationManager;
-        const originalStart = animationManager.startContainerAnimation.bind(animationManager);
-        const originalStop = animationManager.stopAnimation.bind(animationManager);
-        animationManager.startContainerAnimation = async (...args) => {
-            isAnimating = true;
-            toggleBtn.textContent = 'Stop Animation';
-            await originalStart(...args);
-            const checkEnd = () => {
-                if (!animationManager.isAnimating) {
-                    isAnimating = false;
-                    toggleBtn.textContent = 'Start Animation';
-                } else {
-                    setTimeout(checkEnd, 200);
-                }
-            };
-            checkEnd();
-        };
-        animationManager.stopAnimation = (...args) => {
-            isAnimating = false;
-            toggleBtn.textContent = 'Start Animation';
-            return originalStop(...args);
-        };
-        toggleBtn.addEventListener('click', () => {
-            if (!isAnimating) {
-                animationManager.startContainerAnimation(this.uiManager.uiConfig);
-            } else {
-                animationManager.stopAnimation();
-            }
-        });
-
         // Export/Import
         panel.querySelector('#export-config-btn').addEventListener('click', () => {
             const filename = prompt('Enter filename for export:', 'warehouse_config.json');
@@ -228,6 +195,13 @@ export class InteractionManager {
                             locations_per_module: Math.max(1, uiConfig.locations_per_module || 2),
                             storage_depth: Math.max(1, uiConfig.storage_depth || 1),
                             picking_stations: Math.max(1, uiConfig.picking_stations || 1),
+                            // Include PLC stations from the imported configuration
+                            plc_stations: warehouseConfig.plc_stations || null,
+                            // Include prezone_visuals from the imported configuration
+                            prezone_visuals: warehouseConfig.prezone_visuals || {},
+                            // Include other configuration sections
+                            missing_locations: warehouseConfig.missing_locations || [],
+                            location_types: warehouseConfig.location_types || []
                         };
                         this.uiManager.uiConfig = importedConfig;
                         
@@ -434,6 +408,78 @@ export class InteractionManager {
 
         // Select new object
         this.selectedObject = object;
+        
+        // LOG OBJECT POSITION AND DETAILS
+        console.log('=== OBJECT SELECTION DEBUG ===');
+        console.log('Object clicked:', object);
+        console.log('Object name:', object.name);
+        console.log('Object type:', object.type);
+        
+        // Log position information
+        if (object.position) {
+            console.log('Object Position:', {
+                x: object.position.x.toFixed(3),
+                y: object.position.y.toFixed(3),
+                z: object.position.z.toFixed(3)
+            });
+        }
+        
+        // Log world position
+        const worldPosition = new THREE.Vector3();
+        if (object && typeof object.getWorldPosition === 'function') {
+            object.getWorldPosition(worldPosition);
+            console.log('World Position:', {
+                x: worldPosition.x.toFixed(3),
+                y: worldPosition.y.toFixed(3),
+                z: worldPosition.z.toFixed(3)
+            });
+        } else if (object && object.userData && object.userData.isInstancedMeshInstance) {
+            // Handle instanced mesh instances
+            console.log('Instanced Mesh Instance Position:', {
+                x: object.instancePosition.x.toFixed(3),
+                y: object.instancePosition.y.toFixed(3),
+                z: object.instancePosition.z.toFixed(3)
+            });
+            console.log('Instance ID:', object.instanceId);
+        } else {
+            console.warn('Object does not have getWorldPosition method:', object);
+            console.log('Object is Three.js Object3D:', object instanceof THREE.Object3D);
+        }
+        
+        // Log userData
+        if (object.userData && Object.keys(object.userData).length > 0) {
+            console.log('Object userData:', object.userData);
+            
+            // Special logging for PLC stations
+            if (object.userData.plc_address) {
+                console.log('🏭 PLC STATION DETECTED:');
+                console.log('  - PLC Address:', object.userData.plc_address);
+                console.log('  - Station Name:', object.userData.name || 'Unknown');
+                console.log('  - Station Type:', object.userData.type || 'Unknown');
+            }
+            
+            // Special logging for lifts
+            if (object.userData.type === 'lift') {
+                console.log('🔧 LIFT DETECTED:');
+                console.log('  - Lift Type:', object.userData.type);
+                console.log('  - Aisle:', object.userData.aisle);
+            }
+        }
+        
+        // Log parent hierarchy
+        let parent = object.parent;
+        let level = 0;
+        console.log('Parent hierarchy:');
+        while (parent && level < 5) {
+            console.log(`  Level ${level}: ${parent.name || parent.type || 'Unnamed'}`);
+            if (parent.userData && Object.keys(parent.userData).length > 0) {
+                console.log(`    userData:`, parent.userData);
+            }
+            parent = parent.parent;
+            level++;
+        }
+        
+        console.log('=== END DEBUG ===');
         
         // Handle instanced mesh highlighting differently
         if (object.userData && object.userData.isInstancedMeshInstance) {

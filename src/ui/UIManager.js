@@ -452,6 +452,28 @@ export class UIManager {
         return this.uiConfig;
     }
 
+    /**
+     * Updates the configuration with new values from loaded JSON
+     * @param {Object} config - The new configuration object
+     */
+    updateConfig(config) {
+        // Merge the loaded configuration with the current one
+        if (config.warehouse_parameters) {
+            Object.assign(this.uiConfig, config.warehouse_parameters);
+        }
+        
+        // Add any additional sections from the config
+        this.uiConfig.plc_stations = config.plc_stations || [];
+        this.uiConfig.prezone_visuals = config.prezone_visuals || {};
+        this.uiConfig.missing_locations = config.missing_locations || [];
+        this.uiConfig.location_types = config.location_types || [];
+        
+        console.log('🔧 UIManager config updated:', this.uiConfig);
+        
+        // Update storage capacity with new config
+        this.updateStorageCapacity();
+    }
+
     // Duplicate addLog removed. The correct version is at the top of the file, without timestamp.
 
     /**

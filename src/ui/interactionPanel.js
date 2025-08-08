@@ -1,4 +1,4 @@
-// UI panel creation and DOM logic extracted from InteractionManager
+// UI panel creation and DOM logic extracted from UIManager
 // All functions here are pure or only interact with the DOM, not Three.js
 
 export function createInteractionPanel(uiConfig) {
@@ -51,12 +51,6 @@ export function createInteractionPanel(uiConfig) {
                 <input type="range" id="stations" min="1" max="4" value="${uiConfig.picking_stations}">
                 <span id="stations-value">${uiConfig.picking_stations}</span>
             </div>
-            <div class="ui-section animation-section">
-                <h4>Container Animation:</h4>
-                <div class="animation-controls">
-                    <button id="toggle-animation-btn" class="animation-btn">Start Animation</button>
-                </div>
-            </div>
             <div class="ui-section configuration-section">
                 <h4>Configuration:</h4>
                 <div class="config-controls">
@@ -92,7 +86,6 @@ export function updatePanelText(panel) {
     panel.querySelector('label[for="locations"]').textContent = 'Locations per Module:';
     panel.querySelector('label[for="depth"]').textContent = 'Storage Depth:';
     panel.querySelector('label[for="stations"]').textContent = 'Picking Stations:';
-    panel.querySelector('.animation-section h4').textContent = 'Container Animation:';
     panel.querySelector('.configuration-section h4').textContent = 'Configuration:';
     panel.querySelector('#rebuild-btn').textContent = 'Rebuild Warehouse';
     panel.querySelector('#export-config-btn').textContent = '📤 Export JSON';

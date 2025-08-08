@@ -70,14 +70,21 @@ export class SceneManager {
                 
                 console.log('✅ Default configuration loaded');
                 
+                // Store the full configuration
+                this.fullConfig = config;
+                
                 // Convert 1-based indices to 0-based for internal use
                 this.missingLocations = this.convertToZeroBased(config.missing_locations || []);
                 this.locationTypes = this.convertToZeroBased(config.location_types || []);
+                
+                return config;
             } else {
                 console.warn('Could not load default configuration from warehouse_config_instance.json');
+                return null;
             }
         } catch (error) {
             console.warn('Error loading default configuration:', error);
+            return null;
         }
     }
 

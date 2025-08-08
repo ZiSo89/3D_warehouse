@@ -2,6 +2,7 @@
  * Main entry point for the 3D Warehouse Visualization Application.
  * Initializes the scene, UI components, and handles keyboard navigation.
  * @fileoverview 3D warehouse model with performance optimizations and interactive controls
+ * Last update: NO PNEUMATIC CYLINDERS - 2025-01-08T09:30:00Z
  */
 
 import * as THREE from 'three';
@@ -12,6 +13,7 @@ import { InteractionManager } from './src/ui/InteractionManager.js';
 import { PerformanceMonitorUI } from './src/ui/PerformanceMonitorUI.js';
 
 // Initialize core components
+console.log('🔧 Initializing Scene Manager - PNEUMATIC CYLINDERS DISABLED...');
 const sceneManager = new SceneManager();
 // Make canvas focusable and focus it for keyboard navigation
 const canvas = sceneManager.renderer.domElement;
@@ -20,12 +22,15 @@ canvas.style.outline = 'none';
 document.body.appendChild(canvas);
 setTimeout(() => { canvas.focus(); }, 100);
 
+console.log('🎮 Initializing UI Manager...');
 // Initialize UI Manager
 const uiManager = new UIManager(sceneManager);
 
+console.log('🖱️ Initializing Interaction Manager...');
 // Initialize Interaction Manager
 const interactionManager = new InteractionManager(sceneManager, uiManager);
 
+console.log('📊 Initializing Performance Monitor...');
 // Initialize Performance Monitor
 const performanceMonitor = new PerformanceMonitorUI(sceneManager);
 
@@ -36,14 +41,29 @@ const performanceMonitor = new PerformanceMonitorUI(sceneManager);
  * @function initializeWarehouse
  */
 const initializeWarehouse = async () => {
+    console.log('🏗️ Starting warehouse initialization...');
+    
     // Wait for default configuration to load
     if (sceneManager.loadDefaultConfiguration) {
-        await sceneManager.loadDefaultConfiguration();
+        console.log('📄 Loading default configuration...');
+        const loadedConfig = await sceneManager.loadDefaultConfiguration();
+        if (loadedConfig) {
+            console.log('✅ Configuration loaded successfully');
+            // Update UIManager with the loaded configuration
+            uiManager.updateConfig(loadedConfig);
+        }
     }
+    
+    console.log('🏭 Building warehouse with config:', uiManager.getConfig());
     sceneManager.buildWarehouse(uiManager.getConfig());
+    
+    console.log('🎯 Fitting to warehouse view...');
     sceneManager.fitToWarehouseView();
+    
+    console.log('✨ Warehouse initialization complete!');
 };
 
+console.log('🚀 Starting application...');
 initializeWarehouse();
 
 // Add keyboard shortcuts for testing
