@@ -109,14 +109,123 @@ export class InteractionManager {
         // Reset to Default button
         const resetDefaultBtn = panel.querySelector('#reset-default-btn');
         resetDefaultBtn.addEventListener('click', () => {
-            // Default config (should match UIManager's default)
+            // Default config with PLC stations and prezone visuals
             const defaultConfig = {
                 aisles: 3,
-                levels_per_aisle: [5, 6, 4],
-                modules_per_aisle: 8,
+                levels_per_aisle: [9, 9, 9],
+                modules_per_aisle: 6,
                 locations_per_module: 4,
                 storage_depth: 2,
                 picking_stations: 3,
+                // Include PLC stations from current configuration
+                plc_stations: [
+                    {
+                        "name": "Entry",
+                        "position": { "x": -15.0, "y": 0.0, "z": -2.0 },
+                        "plc_address": 11400,
+                        "directions": { "straight": 11401, "divert": null }
+                    },
+                    {
+                        "name": "Aisle 1 Entrance",
+                        "position": { "x": 3.225, "y": 0.0, "z": -2.0 },
+                        "plc_address": 11500,
+                        "directions": { "straight": 11401, "divert": 11600 }
+                    },
+                    {
+                        "name": "Aisle 1 Lift",
+                        "position": { "x": 3.225, "y": 1.0, "z": 4.5 },
+                        "plc_address": 11600,
+                        "directions": { "straight": null, "divert": null }
+                    },
+                    {
+                        "name": "Picking Diverter 1",
+                        "position": { "x": -15.0, "y": 0.0, "z": -8.0 },
+                        "plc_address": 11700,
+                        "directions": { "straight": null, "divert": 11401 }
+                    },
+                    {
+                        "name": "Picking Station 1",
+                        "position": { "x": -15.0, "y": 0.0, "z": -14.0 },
+                        "plc_address": 11800,
+                        "directions": { "straight": 11700, "divert": null }
+                    },
+                    {
+                        "name": "Picking Diverter 2",
+                        "position": { "x": -8.0, "y": 0.0, "z": -8.0 },
+                        "plc_address": 11701,
+                        "directions": { "straight": 11401, "divert": null }
+                    },
+                    {
+                        "name": "Picking Station 2",
+                        "position": { "x": -8.0, "y": 0.0, "z": -14.0 },
+                        "plc_address": 11801,
+                        "directions": { "straight": 11701, "divert": null }
+                    },
+                    {
+                        "name": "Picking Diverter 3",
+                        "position": { "x": -1.0, "y": 0.0, "z": -8.0 },
+                        "plc_address": 11702,
+                        "directions": { "straight": 11401, "divert": null }
+                    },
+                    {
+                        "name": "Picking Station 3",
+                        "position": { "x": -1.0, "y": 0.0, "z": -14.0 },
+                        "plc_address": 11802,
+                        "directions": { "straight": 11702, "divert": null }
+                    },
+                    {
+                        "name": "Aisle 2 Entrance",
+                        "position": { "x": 8.95, "y": 0.0, "z": -2.0 },
+                        "plc_address": 11501,
+                        "directions": { "straight": 11601, "divert": 11401 }
+                    },
+                    {
+                        "name": "Aisle 2 Lift",
+                        "position": { "x": 8.95, "y": 1.0, "z": 4.5 },
+                        "plc_address": 11601,
+                        "directions": { "straight": null, "divert": null }
+                    },
+                    {
+                        "name": "Aisle 3 Entrance",
+                        "position": { "x": 14.65, "y": 0.0, "z": -2.0 },
+                        "plc_address": 11502,
+                        "directions": { "straight": 11602, "divert": 11401 }
+                    },
+                    {
+                        "name": "Aisle 3 Lift",
+                        "position": { "x": 14.65, "y": 1.0, "z": 4.5 },
+                        "plc_address": 11602,
+                        "directions": { "straight": null, "divert": null }
+                    },
+                    {
+                        "name": "Aisle 1 Fill Reader",
+                        "position": { "x": 3.225, "y": 1.0, "z": 6 },
+                        "plc_address": 11900,
+                        "directions": { "straight": null, "divert": null }
+                    },
+                    {
+                        "name": "Aisle 2 Fill Reader",
+                        "position": { "x": 8.95, "y": 1.0, "z": 6 },
+                        "plc_address": 11901,
+                        "directions": { "straight": null, "divert": null }
+                    },
+                    {
+                        "name": "Aisle 3 Fill Reader",
+                        "position": { "x": 14.65, "y": 1.0, "z": 6 },
+                        "plc_address": 11902,
+                        "directions": { "straight": null, "divert": null }
+                    }
+                ],
+                // Include prezone visuals configuration
+                prezone_visuals: {
+                    "ellipse": {
+                        "position": { "x": 0, "y": 0.0, "z": -5.0 },
+                        "dimensions": { "radiusX": 20.0, "radiusZ": 2.0 }
+                    }
+                },
+                // Include missing locations and location types
+                missing_locations: [],
+                location_types: []
             };
             this.uiManager.uiConfig = JSON.parse(JSON.stringify(defaultConfig));
             this.updateInputPanelFromConfig(panel);
@@ -257,7 +366,9 @@ export class InteractionManager {
         syncLevelsPerAisle(this.uiManager.uiConfig.levels_per_aisle, aisleCount);
         
         // Calculate appropriate max value for level sliders based on imported values
-        const maxLevels = Math.max(12, ...this.uiManager.uiConfig.levels_per_aisle, 50);
+        // Default max is 9, but extend if imported config has higher values
+        const maxFromConfig = Math.max(...this.uiManager.uiConfig.levels_per_aisle);
+        const maxLevels = maxFromConfig > 9 ? Math.max(maxFromConfig, 50) : 9;
         
         // Clear and rebuild level inputs
         container.innerHTML = '<h4>Levels per Aisle:</h4>';
@@ -327,7 +438,7 @@ export class InteractionManager {
             aislesSlider.max = Math.max(config.aisles, 10);
         }
         
-        // Update modules slider (default max: 8)
+        // Update modules slider (default max: 6)
         const modulesSlider = panel.querySelector('#modules');
         if (config.modules_per_aisle > parseInt(modulesSlider.max)) {
             modulesSlider.max = Math.max(config.modules_per_aisle, 50);

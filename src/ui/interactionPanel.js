@@ -33,7 +33,7 @@ export function createInteractionPanel(uiConfig) {
             </div>
             <div class="ui-section">
                 <label for="modules">Modules per Aisle:</label>
-                <input type="range" id="modules" min="3" max="8" value="${uiConfig.modules_per_aisle}">
+                <input type="range" id="modules" min="3" max="6" value="${uiConfig.modules_per_aisle}">
                 <span id="modules-value">${uiConfig.modules_per_aisle}</span>
             </div>
             <div class="ui-section">
