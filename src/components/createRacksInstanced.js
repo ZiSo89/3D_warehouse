@@ -1,5 +1,10 @@
+/**
+ * DEPRECATED: Legacy instanced rack implementation superseded by RackBuilder.
+ * Retained temporarily; will be removed after full migration.
+ */
 import * as THREE from 'three';
-import { getLocationTypeColor } from '../ui/theme.js';
+
+// import { getLocationTypeColor } from '../ui/theme.js'; // not used; colors via atlas
 import { TextureAtlasManager } from '../core/TextureAtlasManager.js';
 
 /**
@@ -204,8 +209,8 @@ export class InstancedRacksManager {
             return `storage_${safeName}`;
         }
     }    /**
-     * Create instanced rack frames
-     */
+          * Create instanced rack frames
+          */
     createInstancedFrames(uiConfig, constants, racksGroup, rackAndAisleWidth, totalRackDepth, moduleLength) {
         const frameGeometry = new THREE.BoxGeometry(totalRackDepth, 0.08, moduleLength);
         
@@ -338,7 +343,7 @@ export class InstancedRacksManager {
     /**
      * Update instance visibility based on camera distance (for LOD)
      */
-    updateLOD(camera, lodLevel = 'HIGH') {
+    updateLOD(camera, _lodLevel = 'HIGH') {
         // This will be integrated with the LOD system
         // For now, just maintain full visibility
         this.stats.drawCalls = this.stats.instancedMeshes;

@@ -97,7 +97,7 @@ export class AdvancedLODManager {
         // Calculate scene bounds
         const boundingBox = new THREE.Box3().setFromObject(scene);
         const size = boundingBox.getSize(new THREE.Vector3());
-        const center = boundingBox.getCenter(new THREE.Vector3());
+    const _center = boundingBox.getCenter(new THREE.Vector3());
 
         // Create grid structure
         const gridCountX = Math.ceil(size.x / this.gridSize);
@@ -119,7 +119,7 @@ export class AdvancedLODManager {
         });
 
         this.stats.spatialCells = this.spatialGrid.size;
-        console.log(`🗂️ Spatial grid initialized: ${gridCountX}x${gridCountZ} cells, ${this.stats.spatialCells} populated`);
+        // Spatial grid initialized
     }
 
     /**
@@ -241,7 +241,7 @@ export class AdvancedLODManager {
             })
             .sort((a, b) => a.distance - b.distance);
 
-        for (const { cell, distance, center } of sortedCells) {
+    for (const { cell, distance, center: _center } of sortedCells) {
             // Skip very distant cells entirely
             if (distance > this.lodLevels.LOW.maxDistance * 1.5) {
                 this.setCellVisibility(cell, false);
@@ -278,8 +278,8 @@ export class AdvancedLODManager {
     /**
      * Process objects within a spatial cell
      */
-    processCellObjects(cell, camera, cellDistance, forceUpdate) {
-        const lodLevel = this.determineLODLevel(cellDistance);
+    processCellObjects(cell, camera, cellDistance, _forceUpdate) {
+    // const lodLevel = this.determineLODLevel(cellDistance); // not directly used; per-object LOD computed below
         
         cell.objects.forEach(object => {
             this.stats.totalObjects++;
@@ -315,7 +315,7 @@ export class AdvancedLODManager {
      * Process LOD directly without spatial partitioning
      */
     processDirectLOD(scene, camera) {
-        scene.traverse((object) => {
+    scene.traverse((object) => {
             if (this.shouldProcessObject(object)) {
                 this.stats.totalObjects++;
                 this.processObjectLOD(object, camera);
@@ -390,7 +390,7 @@ export class AdvancedLODManager {
     /**
      * Apply LOD to instanced rack objects
      */
-    applyInstancedLOD(object, lodLevel, lodConfig) {
+    applyInstancedLOD(object, _lodLevel, lodConfig) {
         // Shadow settings
         object.castShadow = lodConfig.enableShadows;
         object.receiveShadow = lodConfig.enableShadows;
@@ -435,7 +435,7 @@ export class AdvancedLODManager {
                 }
                 break;
                 
-            case 'low':
+            case 'low': {
                 if (material.metalness !== undefined) {
                     if (!material.userData.originalMetalness) {
                         material.userData.originalMetalness = material.metalness;
@@ -444,7 +444,7 @@ export class AdvancedLODManager {
                     material.metalness *= 0.5;
                     material.roughness = Math.min(1, material.roughness * 1.5);
                 }
-                break;
+                break; }
         }
     }
 
@@ -470,9 +470,11 @@ export class AdvancedLODManager {
                         child.visible = true;
                         break;
                     case 'LOW':
+                        /* eslint-disable no-case-declarations */
                         // Show only every 4th location for performance
                         const showLocation = (child.userData?.position ?? 0) % 4 === 0;
                         child.visible = showLocation;
+                        /* eslint-enable no-case-declarations */
                         break;
                 }
                 
@@ -565,8 +567,8 @@ export class AdvancedLODManager {
         }
         
         try {
-            return this.frustumCuller.intersectsObject(object);
-        } catch (e) {
+                return this.frustumCuller.intersectsObject(object);
+    } catch {
             return true; // Fallback to visible
         }
     }

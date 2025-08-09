@@ -1,6 +1,11 @@
 
 
+/**
+ * DEPRECATED: Legacy non-instanced rack creation.
+ * Kept temporarily for reference/testing. New code should use RackBuilder.
+ */
 import * as THREE from 'three';
+
 import { getLocationTypeColor } from '../ui/theme.js';
 
 export function createRacks(uiConfig, constants, missingLocations = [], locationTypes = null) {
@@ -82,24 +87,7 @@ export function createRacks(uiConfig, constants, missingLocations = [], location
     const rackAndAisleWidth = (totalRackDepth * 2) + constants.aisleWidth;
 
     // Use MeshPhysicalMaterial for more realistic metal appearance
-    const darkGreyMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0x1e3231, // Dark green-grey from palette
-        metalness: 0.7,
-        roughness: 0.5,
-        clearcoat: 0.4,
-        clearcoatRoughness: 0.25,
-        reflectivity: 0.7,
-        envMapIntensity: 0.7
-    });
-    const lightGreyMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0x6e9075, // Medium green from palette
-        metalness: 0.5,
-        roughness: 0.4,
-        clearcoat: 0.3,
-        clearcoatRoughness: 0.3,
-        reflectivity: 0.5,
-        envMapIntensity: 0.5
-    });
+    // Removed unused darkGreyMaterial/lightGreyMaterial definitions (were not referenced)
 
     // Enhanced frame materials with better metallic appearance
     const steelFrameMaterial = new THREE.MeshPhysicalMaterial({

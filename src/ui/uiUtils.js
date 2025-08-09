@@ -47,9 +47,9 @@ export function getCameraViewConfig(view, config) {
     switch(view) {
         case 'overview': {
             // Calculate offsets based on the reference position and current warehouse config
-            const offsetX = 30.0;
-            const offsetY = 20.0;
-            const offsetZ = 30.0;
+            const offsetX = 15.0; // Reduced from 30.0
+            const offsetY = 12.0; // Reduced from 20.0  
+            const offsetZ = 18.0; // Reduced from 30.0
             return {
                 position: {x: centerX + offsetX, y: offsetY, z: centerZ + offsetZ},
                 target: {x: centerX, y: 0, z: centerZ}

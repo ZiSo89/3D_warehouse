@@ -374,7 +374,7 @@ export class PLCStationManager {
      * @param {THREE.Group} group - Station group
      * @param {Object} stationData - Station configuration
      */
-    addDirectionIndicators(group, stationData) {
+    addDirectionIndicators(_group, _stationData) {
         // Simplified - no complex arrow indicators
         return;
     }
@@ -385,7 +385,7 @@ export class PLCStationManager {
      * @param {string} type - Arrow type ('straight' or 'divert')
      * @returns {THREE.Group} Empty group
      */
-    createArrow(color, type) {
+    createArrow(_color, _type) {
         // Simplified - return empty group
         return new THREE.Group();
     }
@@ -432,7 +432,7 @@ export class PLCStationManager {
      * Adds base plate to station (simplified - no extra shapes)
      * @param {THREE.Group} group - Station group
      */
-    addBasePlate(group) {
+    addBasePlate(_group) {
         // Simplified - no base plate
         return;
     }
@@ -441,7 +441,7 @@ export class PLCStationManager {
      * Adds scanning grid to fill reader (simplified - no complex shapes)
      * @param {THREE.Group} group - Fill reader group
      */
-    addScanningGrid(group) {
+    addScanningGrid(_group) {
         // Simplified - no scanning grid
         return;
     }
@@ -542,7 +542,7 @@ export class PLCStationManager {
         prezoneGroup.name = 'SRC_PLCPrezone';
 
         // Create all PLC stations with SRC analysis
-        plcStations.forEach((stationData, index) => {
+    plcStations.forEach((stationData) => {
             // Analyze using SRC convention
             const analysis = this.analyzeStationAddress(stationData.plc_address);
             
@@ -604,14 +604,14 @@ export class PLCStationManager {
      * @param {Array} plcStations - PLC station configurations
      * @param {THREE.Group} prezoneGroup - Prezone group to add conveyors to
      */
-    generateConveyorConnections(plcStations, prezoneGroup) {
+    generateConveyorConnections(plcStations, _prezoneGroup) {
         const stationMap = new Map();
         plcStations.forEach(station => {
             stationMap.set(station.plc_address, station);
         });
 
         plcStations.forEach(station => {
-            const directions = station.directions;
+            const _directions = station.directions;
 
             // Create straight path - DISABLED: Conveyors handled by createStationConnections
             /*
@@ -649,7 +649,7 @@ export class PLCStationManager {
      * @param {number} plcAddress - PLC address
      * @param {Object} state - New state
      */
-    updateStationState(plcAddress, state) {
+    updateStationState(plcAddress, _state) {
         const station = this.getStation(plcAddress);
         if (station) {
             // Update visual indicators based on state

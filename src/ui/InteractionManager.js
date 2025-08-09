@@ -5,10 +5,11 @@
  * @param {UIManager} uiManager - The UI manager instance.
  */
 
-import { getCameraViewConfig, syncLevelsPerAisle } from './uiUtils.js';
 import * as THREE from 'three';
+
+import { /* getCameraViewConfig, */ syncLevelsPerAisle } from './uiUtils.js';
 import { createInteractionPanel, updatePanelText } from './interactionPanel.js';
-import { bindCameraEvents, setCameraPreset, animateCamera } from './cameraControls.js';
+import { bindCameraEvents, setCameraPreset /*, animateCamera */ } from './cameraControls.js';
 import { getSelectableObjects, filterSelectedObject, showObjectInfo } from './objectSelectionUtils.js';
 import { exportWarehouseConfiguration, importWarehouseConfiguration, validateWarehouseConfiguration } from '../core/warehouseConfigIO.js';
 import { calculateTotalLocations } from '../core/warehouseMetrics.js';
@@ -468,7 +469,7 @@ export class InteractionManager {
         };
 
         for (let i = 0; i < aisleCount; i++) {
-            const aisleNum = i + 1;
+            const _aisleNum = i + 1; // unused
             const pos = generateAislePosition(i);
             
             // Aisle Entrance (11500 + i)
@@ -518,10 +519,6 @@ export class InteractionManager {
         }
         
         this.uiManager.uiConfig.prezone_visuals.ellipse.dimensions.radiusX = Math.max(newRadiusX, 15.0);
-        
-        console.log(`[PLC Update] Updated for ${aisleCount} aisles:`);
-        console.log(`- Total PLC stations: ${this.uiManager.uiConfig.plc_stations.length}`);
-        console.log(`- Ellipse radiusX: ${this.uiManager.uiConfig.prezone_visuals.ellipse.dimensions.radiusX}`);
     }
 
     /**
@@ -619,7 +616,7 @@ export class InteractionManager {
      * Handles mouse move events for hover effects in the 3D scene.
      * @param {MouseEvent} event
      */
-    onMouseMove(event) {
+    onMouseMove(_event) {
         // Implement your mouse move logic here
     }
 
@@ -628,13 +625,47 @@ export class InteractionManager {
      * @param {KeyboardEvent} event
      */
     onKeyDown(event) {
-        // Log camera position when 'C' is pressed (for debugging)
-        if (event.key === 'c' || event.key === 'C') {
-            const cam = this.sceneManager.camera;
-            if (cam && cam.position) {
-                console.log('Camera position:', cam.position);
+        // Camera movement controls
+        const moveDistance = 2;
+        const camera = this.sceneManager.camera;
+        const controls = this.sceneManager.controls;
+        
+        if (!camera || !controls) return;
+
+        switch(event.key.toLowerCase()) {
+            case 'w': // Forward
+                camera.position.z -= moveDistance;
+                break;
+            case 's': // Backward
+                camera.position.z += moveDistance;
+                break;
+            case 'a': // Left
+                camera.position.x -= moveDistance;
+                break;
+            case 'd': // Right
+                camera.position.x += moveDistance;
+                break;
+            case 'q': // Up
+                camera.position.y += moveDistance;
+                break;
+            case 'e': // Down
+                camera.position.y -= moveDistance;
+                break;
+            case 'r': { // Zoom in
+                const forward = new THREE.Vector3();
+                camera.getWorldDirection(forward);
+                camera.position.addScaledVector(forward, moveDistance);
+                break;
+            }
+            case 'f': { // Zoom out
+                const backward = new THREE.Vector3();
+                camera.getWorldDirection(backward);
+                camera.position.addScaledVector(backward, -moveDistance);
+                break;
             }
         }
+        
+        controls.update();
     }
 
     /**
@@ -647,78 +678,6 @@ export class InteractionManager {
 
         // Select new object
         this.selectedObject = object;
-        
-        // LOG OBJECT POSITION AND DETAILS
-        console.log('=== OBJECT SELECTION DEBUG ===');
-        console.log('Object clicked:', object);
-        console.log('Object name:', object.name);
-        console.log('Object type:', object.type);
-        
-        // Log position information
-        if (object.position) {
-            console.log('Object Position:', {
-                x: object.position.x.toFixed(3),
-                y: object.position.y.toFixed(3),
-                z: object.position.z.toFixed(3)
-            });
-        }
-        
-        // Log world position
-        const worldPosition = new THREE.Vector3();
-        if (object && typeof object.getWorldPosition === 'function') {
-            object.getWorldPosition(worldPosition);
-            console.log('World Position:', {
-                x: worldPosition.x.toFixed(3),
-                y: worldPosition.y.toFixed(3),
-                z: worldPosition.z.toFixed(3)
-            });
-        } else if (object && object.userData && object.userData.isInstancedMeshInstance) {
-            // Handle instanced mesh instances
-            console.log('Instanced Mesh Instance Position:', {
-                x: object.instancePosition.x.toFixed(3),
-                y: object.instancePosition.y.toFixed(3),
-                z: object.instancePosition.z.toFixed(3)
-            });
-            console.log('Instance ID:', object.instanceId);
-        } else {
-            console.warn('Object does not have getWorldPosition method:', object);
-            console.log('Object is Three.js Object3D:', object instanceof THREE.Object3D);
-        }
-        
-        // Log userData
-        if (object.userData && Object.keys(object.userData).length > 0) {
-            console.log('Object userData:', object.userData);
-            
-            // Special logging for PLC stations
-            if (object.userData.plc_address) {
-                console.log('🏭 PLC STATION DETECTED:');
-                console.log('  - PLC Address:', object.userData.plc_address);
-                console.log('  - Station Name:', object.userData.name || 'Unknown');
-                console.log('  - Station Type:', object.userData.type || 'Unknown');
-            }
-            
-            // Special logging for lifts
-            if (object.userData.type === 'lift') {
-                console.log('🔧 LIFT DETECTED:');
-                console.log('  - Lift Type:', object.userData.type);
-                console.log('  - Aisle:', object.userData.aisle);
-            }
-        }
-        
-        // Log parent hierarchy
-        let parent = object.parent;
-        let level = 0;
-        console.log('Parent hierarchy:');
-        while (parent && level < 5) {
-            console.log(`  Level ${level}: ${parent.name || parent.type || 'Unnamed'}`);
-            if (parent.userData && Object.keys(parent.userData).length > 0) {
-                console.log(`    userData:`, parent.userData);
-            }
-            parent = parent.parent;
-            level++;
-        }
-        
-        console.log('=== END DEBUG ===');
         
         // Handle instanced mesh highlighting differently
         if (object.userData && object.userData.isInstancedMeshInstance) {
@@ -863,7 +822,7 @@ export class InteractionManager {
                     // Exclude unwanted keys and increment indices for display, and omit 'type' from details
                     const excludeKeys = ['id', 'coordinates', 'time', 'type'];
                     const details = Object.entries(object.userData)
-                        .filter(([k, v]) => !excludeKeys.includes(k))
+                        .filter(([k, _v]) => !excludeKeys.includes(k))
                         .map(([k, v]) => {
                             if (incrementKeys.includes(k) && typeof v === 'number') {
                                 return `<div style='margin-left:10px;'><strong>${k}:</strong> ${v === -1 ? '-' : v + 1}</div>`;
@@ -883,7 +842,7 @@ export class InteractionManager {
     /**
      * Deselects the currently selected object.
      */
-    deselectObject() {
+    deselectObjectLegacy() {
         if (this.selectedObject && this.originalMaterial) {
             // Dispose highlight material to avoid memory leaks
             if (this.selectedObject.material && this.selectedObject.material.dispose) {
@@ -933,7 +892,7 @@ export class InteractionManager {
         this.isInstancedSelection = true;
         
         // Create a temporary highlight material for the specific instance
-        const highlightMaterial = new THREE.MeshBasicMaterial({
+    const _highlightMaterial = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
             transparent: true,
             opacity: 0.7
@@ -960,7 +919,7 @@ export class InteractionManager {
         
         // Get the exact world position of this instance
         const matrix = new THREE.Matrix4();
-        originalMesh.getMatrixAt(instanceId, matrix);
+    originalMesh.getMatrixAt(instanceId, matrix);
         
         // Apply parent transformations to get world coordinates
         const worldMatrix = new THREE.Matrix4();
@@ -996,7 +955,7 @@ export class InteractionManager {
         // Instead of using constants, get the actual geometry dimensions
         const originalGeometry = originalMesh.geometry;
         if (originalGeometry && originalGeometry.boundingBox) {
-            originalGeometry.computeBoundingBox();
+        originalGeometry.computeBoundingBox();
         }
         
         let actualWidth, actualHeight, actualDepth;
@@ -1024,14 +983,14 @@ export class InteractionManager {
             depth * 1.05
         );
         
-        const highlightMaterial = new THREE.MeshBasicMaterial({
+    const _highlightMaterial2 = new THREE.MeshBasicMaterial({
             color: 0x00ff00,
             wireframe: true,
             transparent: true,
             opacity: 0.9
         });
         
-        this.instanceHighlight = new THREE.Mesh(highlightGeometry, highlightMaterial);
+    this.instanceHighlight = new THREE.Mesh(highlightGeometry, _highlightMaterial2);
         
         // Position the highlight at the exact center of the instance
         this.instanceHighlight.position.copy(position);

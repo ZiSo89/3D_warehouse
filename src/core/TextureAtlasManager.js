@@ -4,6 +4,7 @@
  */
 
 import * as THREE from 'three';
+
 import { LOCATION_TYPE_COLORS, getLocationTypeColor } from '../ui/theme.js';
 
 export class TextureAtlasManager {
@@ -138,6 +139,10 @@ export class TextureAtlasManager {
      * Create pattern atlas for repeated textures
      */
     createPatternAtlas() {
+        // Headless/test environment guard: skip pattern atlas when no DOM
+        if (typeof document === 'undefined' || !document.createElement) {
+            return; // In Node/Vitest we don't have a canvas; skip procedural pattern atlas
+        }
         // Create procedural textures for different patterns
         const patterns = this.createProceduralPatterns();
         
@@ -205,6 +210,9 @@ export class TextureAtlasManager {
      * Create metal grid pattern
      */
     createMetalGridPattern(size) {
+        if (typeof document === 'undefined') {
+            return { canvas: { width: size, height: size }, name: 'metal_grid' };
+        }
         const canvas = document.createElement('canvas');
         canvas.width = size;
         canvas.height = size;
@@ -239,6 +247,9 @@ export class TextureAtlasManager {
      * Create concrete pattern
      */
     createConcretePattern(size) {
+        if (typeof document === 'undefined') {
+            return { canvas: { width: size, height: size }, name: 'concrete' };
+        }
         const canvas = document.createElement('canvas');
         canvas.width = size;
         canvas.height = size;
@@ -267,6 +278,9 @@ export class TextureAtlasManager {
      * Create warning stripes pattern
      */
     createWarningStripesPattern(size) {
+        if (typeof document === 'undefined') {
+            return { canvas: { width: size, height: size }, name: 'warning_stripes' };
+        }
         const canvas = document.createElement('canvas');
         canvas.width = size;
         canvas.height = size;
@@ -380,7 +394,7 @@ export class TextureAtlasManager {
      * Optimize materials for instanced rendering
      */
     optimizeMaterialsForInstancing() {
-        this.materials.forEach((material, name) => {
+    this.materials.forEach((material, _name) => {
             // Disable features that don't work well with instancing
             material.transparent = false;
             material.alphaTest = 0;

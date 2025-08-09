@@ -1,6 +1,7 @@
-import { getCameraViewConfig } from './uiUtils.js';
-import * as THREE from 'three';
+// import * as THREE from 'three'; // removed unused
+
 import { UI_THEME } from './theme.js';
+// import { RackBuilderStatsPanel } from './RackBuilderStatsPanel.js'; // removed - stats panel disabled
 
 /**
  * Manages the user interface for warehouse configuration and controls.
@@ -89,6 +90,11 @@ export class UIManager {
             infoDiv.style.pointerEvents = 'none';
             document.body.appendChild(infoDiv);
         }
+
+        // RackBuilder stats panel disabled - removed from UI for cleaner look
+        // try {
+        //     this._rbStatsPanel = new RackBuilderStatsPanel({});
+        // } catch { /* ignore if DOM unavailable */ }
     }
 
     /**
@@ -398,7 +404,7 @@ export class UIManager {
         
         // Get missing locations and location types from SceneManager
         const missingLocations = this.sceneManager.missingLocations || [];
-        const locationTypes = this.sceneManager.locationTypes || [];
+    // const locationTypes = this.sceneManager.locationTypes || []; // not used in capacity calculation
         
         // Helper function to check if a location is missing
         const isLocationMissing = (aisle, level, module, depth, position) => {
@@ -468,8 +474,6 @@ export class UIManager {
         this.uiConfig.missing_locations = config.missing_locations || [];
         this.uiConfig.location_types = config.location_types || [];
         
-        console.log('🔧 UIManager config updated:', this.uiConfig);
-        
         // Update storage capacity with new config
         this.updateStorageCapacity();
     }
@@ -480,14 +484,7 @@ export class UIManager {
      * Sets the camera to a predefined view.
      * @param {string} view - The name of the camera view preset.
      */
-    setCameraView(view) {
-        const camera = this.sceneManager.camera;
-        const controls = this.sceneManager.controls;
-        const { position, target } = getCameraViewConfig(view, this.uiConfig);
-        camera.position.copy(new THREE.Vector3(position.x, position.y, position.z));
-        controls.target.copy(new THREE.Vector3(target.x, target.y, target.z));
-        controls.update();
-    }
+    // setCameraView(view) { /* removed unused method to eliminate lint warning */ }
 
     // updateUIFromConfig is intentionally omitted; UI controls are managed by InteractionManager.
 }

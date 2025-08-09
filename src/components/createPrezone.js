@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+
 import { PLCStationManager } from './PLCStationManager.js';
 
 // PLC address decoding (F L T C C)
@@ -75,14 +76,14 @@ function updatePLCStationsForPickingStations(uiConfig) {
         const totalAdditionalRadius = pickingStationRadius + aisleRadius;
         uiConfig.prezone_visuals.ellipse.dimensions.radiusX = baseRadiusX + totalAdditionalRadius;
         
-        console.log(`[Dynamic Ellipse] Picking stations: ${pickingStationsCount}, Aisles: ${aisleCount}, RadiusX: ${baseRadiusX + totalAdditionalRadius}`);
+        // Dynamic ellipse sizing complete
     }
 }
 
 // ------------------------------------------------------------
 // Main entry (loop removed) + simple ellipse bar
 // ------------------------------------------------------------
-export function createPrezone(uiConfig, constants) {
+export function createPrezone(uiConfig, _constants) {
     const prezoneGroup = new THREE.Group();
     prezoneGroup.name = 'PrezoneGroup';
 
@@ -103,7 +104,7 @@ export function createPrezone(uiConfig, constants) {
         createStationConnections(prezoneGroup, filteredStations);
     } else {
         createPickingStation(prezoneGroup, uiConfig);
-        createMultiLiftConveyorSystem(prezoneGroup, uiConfig, constants);
+    createMultiLiftConveyorSystem(prezoneGroup, uiConfig, _constants);
     }
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
@@ -159,7 +160,7 @@ function createPickingStation(parent, uiConfig) {
     }
 }
 
-function createMultiLiftConveyorSystem(parent, uiConfig, constants) {
+function createMultiLiftConveyorSystem(parent, uiConfig, _constants) {
     const rackAndAisleWidth = (uiConfig.storage_depth * 0.8 * 2) + 2.5;
     const levelOffset = 0.3;
     const horizontalOffset = 0.15;
@@ -241,7 +242,7 @@ function createMultiLiftConveyorSystem(parent, uiConfig, constants) {
 // ------------------------------------------------------------
 // Support pillars (currently disabled)
 // ------------------------------------------------------------
-function createSupportPillars(parent, liftX, startZ, endZ, lowerLevel, upperLevel) {
+function createSupportPillars(_parent, _liftX, _startZ, _endZ, _lowerLevel, _upperLevel) {
     const DISABLE = true;
     if (DISABLE) return;
     // (Implementation placeholder if pillars are later enabled)
@@ -250,7 +251,7 @@ function createSupportPillars(parent, liftX, startZ, endZ, lowerLevel, upperLeve
 // ------------------------------------------------------------
 // Conveyor segment creation
 // ------------------------------------------------------------
-function createConveyorSegment(parent, startPoint, endPoint, segmentName, flowType = 'general') {
+function createConveyorSegment(parent, startPoint, endPoint, _segmentName, flowType = 'general') {
     const DISABLED = false; // set true to hide conveyors
     if (DISABLED) {
         return;
@@ -285,8 +286,8 @@ function createConveyorSegment(parent, startPoint, endPoint, segmentName, flowTy
 
     // Midpoint
     mesh.position.set(startPoint.x + dx / 2, startPoint.y + dy / 2, startPoint.z + dz / 2);
-    mesh.name = `ConveyorSegment_${segmentName}`;
-    mesh.userData = { type: 'conveyor_segment', segment_name: segmentName, flow_type: flowType, from: startPoint.name, to: endPoint.name };
+    mesh.name = `ConveyorSegment_${_segmentName}`;
+    mesh.userData = { type: 'conveyor_segment', segment_name: _segmentName, flow_type: flowType, from: startPoint.name, to: endPoint.name };
     parent.add(mesh);
 }
 
@@ -403,7 +404,7 @@ function createMainLoopConnections(parent, stations, uiConfig) {
     });
 
     // Reposition stations on the ellipse perimeter (positioning only, no conveyor creation)
-    connectingStations.forEach((station, index) => {
+    connectingStations.forEach((station, _index) => {
         // Store original position
         const originalX = station.position.x;
         const originalZ = station.position.z;
@@ -499,51 +500,7 @@ function findStationMesh(parent, plcAddress) {
 }
 
 // Create a cylinder between two points
-function createConnectionCylinder(parent, startPoint, endPoint, name) {
-    const dx = endPoint.x - startPoint.x;
-    const dy = endPoint.y - startPoint.y;
-    const dz = endPoint.z - startPoint.z;
-    const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    
-    if (length === 0) return;
-    
-    // Create cylinder geometry
-    const geometry = new THREE.CylinderGeometry(0.1, 0.1, length, 12);
-    
-    // Material similar to main loop
-    const material = new THREE.MeshPhysicalMaterial({
-        color: 0x6a8caf, // Slightly different blue-gray
-        metalness: 0.7,
-        roughness: 0.3,
-        clearcoat: 0.2,
-        transparent: false,
-        opacity: 1.0
-    });
-    
-    const cylinder = new THREE.Mesh(geometry, material);
-    
-    // Position cylinder at midpoint
-    cylinder.position.set(
-        (startPoint.x + endPoint.x) / 2,
-        (startPoint.y + endPoint.y) / 2,
-        (startPoint.z + endPoint.z) / 2
-    );
-    
-    // Rotate cylinder to align with direction
-    const direction = new THREE.Vector3(dx, dy, dz).normalize();
-    const up = new THREE.Vector3(0, 1, 0);
-    const quaternion = new THREE.Quaternion().setFromUnitVectors(up, direction);
-    cylinder.setRotationFromQuaternion(quaternion);
-    
-    cylinder.name = name;
-    cylinder.userData = { 
-        type: 'main_loop_connection',
-        from_station: startPoint,
-        to_loop: endPoint
-    };
-    
-    parent.add(cylinder);
-}
+function _createConnectionCylinder() { /* deprecated no-op */ }
 
 // Export function to update PLC stations from external modules
 export function updatePLCStationsForPickingCount(uiConfig) {

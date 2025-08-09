@@ -1,16 +1,18 @@
 import * as THREE from 'three';
-import { createOrientationLabels, createCompass, updateCompassPosition } from './sceneCompass.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { createRacks } from '../components/createRacks.js';
-import { createRacksInstanced } from '../components/createRacksInstanced.js';
+
+import { createOrientationLabels, createCompass, updateCompassPosition } from './sceneCompass.js';
+// Legacy creators (createRacks / createRacksInstanced) deprecated – unified RackBuilder in use.
+import { RackBuilder } from '../engine/builders/RackBuilder.js';
 import { createPrezone } from '../components/createPrezone.js';
 import { AdvancedLODManager } from './AdvancedLODManager.js';
 import { AnimationManager } from '../animation/AnimationManager.js';
 import { constants } from './constants.js';
 import { setupLighting, createGroundPlane } from './sceneLighting.js';
-import { exportWarehouseConfiguration, importWarehouseConfiguration, validateWarehouseConfiguration } from './warehouseConfigIO.js';
-import { updateMissingLocations, addMissingLocation, clearMissingLocations, getLocationType, addBufferLocation, clearBufferLocations } from './locationUtils.js';
-import { calculateTotalLocations } from './warehouseMetrics.js';
+// Unused utility imports commented out to reduce lint noise; re-enable when needed.
+// import { exportWarehouseConfiguration, importWarehouseConfiguration, validateWarehouseConfiguration } from './warehouseConfigIO.js';
+// import { updateMissingLocations, addMissingLocation, clearMissingLocations, getLocationType, addBufferLocation, clearBufferLocations } from './locationUtils.js';
+// import { calculateTotalLocations } from './warehouseMetrics.js';
 import { getCameraViewConfig } from '../ui/uiUtils.js';
 
 /**
@@ -43,6 +45,8 @@ export class SceneManager {
         this.animationManager = new AnimationManager(this);
         this.scene.add(this.warehouseGroup);
         this.useInstancedRendering = true; // Enable instanced rendering by default
+    this.useNewRackBuilder = true; // feature flag enabled by default now
+    this.rackBuilder = new RackBuilder({ instanced: this.useInstancedRendering });
         
         // Initialize Advanced LOD Manager
         this.lodManager = new AdvancedLODManager();
@@ -67,8 +71,6 @@ export class SceneManager {
             const response = await fetch('./warehouse_config_instance.json');
             if (response.ok) {
                 const config = await response.json();
-                
-                console.log('✅ Default configuration loaded');
                 
                 // Store the full configuration
                 this.fullConfig = config;
@@ -132,8 +134,7 @@ export class SceneManager {
         // Compute bounding box of warehouse only
         const box = new THREE.Box3().setFromObject(this.warehouseGroup);
         const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
-
+    const center = box.getCenter(new THREE.Vector3());
         // Use overview camera position on initial load
         if (this.currentConfig) {
             const overviewConfig = getCameraViewConfig('overview', this.currentConfig);
@@ -158,7 +159,7 @@ export class SceneManager {
             }
         } else {
             // Fallback to original behavior if no config available
-            const fitOffset = 0.8;
+            const fitOffset = 1.5; // Reduced to zoom in
             const maxDim = Math.max(size.x, size.y, size.z);
             const camDistance = maxDim * fitOffset;
             this.camera.position.set(center.x + camDistance, center.y + camDistance * 0.6, center.z + camDistance);
@@ -229,8 +230,8 @@ export class SceneManager {
                             if (grandchild.isMesh && grandchild.geometry && grandchild.geometry.boundingSphere) {
                                 try {
                                     visible = visible && frustum.intersectsObject(grandchild);
-                                } catch (e) {
-                                    visible = visible;
+                                } catch {
+                                    // swallow intersection errors (leave visibility as-is)
                                 }
                             }
                             grandchild.visible = visible;
@@ -240,8 +241,8 @@ export class SceneManager {
                 if (child.isMesh && child.geometry && child.geometry.boundingSphere) {
                     try {
                         child.visible = frustum.intersectsObject(child);
-                    } catch (e) {
-                        child.visible = true;
+                    } catch {
+                        child.visible = true; // fallback visible
                     }
                 } else if (!child.userData || !child.userData.isRackLine) {
                     child.visible = true;
@@ -249,7 +250,6 @@ export class SceneManager {
             });
         }
     }
-
 
     /**
      * Builds the complete warehouse 3D model based on UI configuration.
@@ -269,10 +269,9 @@ export class SceneManager {
             this.warehouseGroup.remove(this.warehouseGroup.children[0]);
         }
 
-        // Use instanced rendering for better performance
-        const racks = this.useInstancedRendering 
-            ? createRacksInstanced(uiConfig, constants, this.missingLocations, this.locationTypes)
-            : createRacks(uiConfig, constants, this.missingLocations, this.locationTypes);
+    // Always use unified RackBuilder now
+    this.rackBuilder.instanced = this.useInstancedRendering;
+    const racks = this.rackBuilder.build(uiConfig, this.missingLocations, this.locationTypes);
         
         this.warehouseGroup.add(racks);
 

@@ -2,7 +2,6 @@
  * Main entry point for the 3D Warehouse Visualization Application.
  * Initializes the scene, UI components, and handles keyboard navigation.
  * @fileoverview 3D warehouse model with performance optimizations and interactive controls
- * Last update: NO PNEUMATIC CYLINDERS - 2025-01-08T09:30:00Z
  */
 
 import * as THREE from 'three';
@@ -11,10 +10,16 @@ import { SceneManager } from './src/core/SceneManager.js';
 import { UIManager } from './src/ui/UIManager.js';
 import { InteractionManager } from './src/ui/InteractionManager.js';
 import { PerformanceMonitorUI } from './src/ui/PerformanceMonitorUI.js';
+import { EventBus } from './src/integration/EventBus.js';
+import { SceneAssembler } from './src/engine/builders/SceneAssembler.js';
 
 // Initialize core components
-console.log('🔧 Initializing Scene Manager - PNEUMATIC CYLINDERS DISABLED...');
 const sceneManager = new SceneManager();
+
+// Domain & metrics pipeline (non-invasive)
+const eventBus = new EventBus();
+const sceneAssembler = new SceneAssembler(eventBus);
+
 // Make canvas focusable and focus it for keyboard navigation
 const canvas = sceneManager.renderer.domElement;
 canvas.setAttribute('tabindex', '0');
@@ -22,15 +27,12 @@ canvas.style.outline = 'none';
 document.body.appendChild(canvas);
 setTimeout(() => { canvas.focus(); }, 100);
 
-console.log('🎮 Initializing UI Manager...');
 // Initialize UI Manager
 const uiManager = new UIManager(sceneManager);
 
-console.log('🖱️ Initializing Interaction Manager...');
 // Initialize Interaction Manager
 const interactionManager = new InteractionManager(sceneManager, uiManager);
 
-console.log('📊 Initializing Performance Monitor...');
 // Initialize Performance Monitor
 const performanceMonitor = new PerformanceMonitorUI(sceneManager);
 
@@ -41,29 +43,27 @@ const performanceMonitor = new PerformanceMonitorUI(sceneManager);
  * @function initializeWarehouse
  */
 const initializeWarehouse = async () => {
-    console.log('🏗️ Starting warehouse initialization...');
-    
     // Wait for default configuration to load
     if (sceneManager.loadDefaultConfiguration) {
-        console.log('📄 Loading default configuration...');
         const loadedConfig = await sceneManager.loadDefaultConfiguration();
         if (loadedConfig) {
-            console.log('✅ Configuration loaded successfully');
             // Update UIManager with the loaded configuration
             uiManager.updateConfig(loadedConfig);
         }
     }
     
-    console.log('🏭 Building warehouse with config:', uiManager.getConfig());
     sceneManager.buildWarehouse(uiManager.getConfig());
     
-    console.log('🎯 Fitting to warehouse view...');
-    sceneManager.fitToWarehouseView();
+    // Build domain representation & emit metrics (does not alter rendering yet)
+    try {
+        sceneAssembler.buildDomain(uiManager.getConfig(), sceneManager.missingLocations || []);
+    } catch (e) {
+        console.warn('Domain build failed:', e);
+    }
     
-    console.log('✨ Warehouse initialization complete!');
+    sceneManager.fitToWarehouseView();
 };
 
-console.log('🚀 Starting application...');
 initializeWarehouse();
 
 // Add keyboard shortcuts for testing
@@ -73,15 +73,12 @@ document.addEventListener('keydown', (event) => {
         const current = sceneManager.isInstancedRenderingEnabled();
         sceneManager.toggleInstancedRendering(!current);
         sceneManager.buildWarehouse(uiManager.getConfig());
-        console.log(`🔄 Rendering mode: ${!current ? 'Instanced' : 'Regular'}`);
     }
     if (event.key === 'h' || event.key === 'H') {
         // Show help
-        console.log('🎮 Keyboard shortcuts: I=Toggle rendering | P=Performance monitor | C=Camera position | H=Help');
+        alert('🎮 Camera Controls:\nW/S: Forward/Back\nA/D: Left/Right\nQ/E: Up/Down\nR/F: Zoom In/Out\n\nOther:\nI: Toggle rendering mode');
     }
 });
-
-console.log('🚀 Warehouse 3D Model loaded! Press "H" for keyboard shortcuts.');
 
 // === Game-like Keyboard Navigation ===
 const keyState = {};

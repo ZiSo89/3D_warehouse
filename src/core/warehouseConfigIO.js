@@ -70,12 +70,12 @@
  * @typedef {Object} WarehouseConfig
  * @property {{name:string,created:string,version:string,description:string}} metadata
  * @property {{
- *  aisles:number,
- *  levels_per_aisle:number[],
- *  modules_per_aisle:number,
- *  locations_per_module:number,
- *  storage_depth:number,
- *  picking_stations:number
+ * aisles:number,
+ * levels_per_aisle:number[],
+ * modules_per_aisle:number,
+ * locations_per_module:number,
+ * storage_depth:number,
+ * picking_stations:number
  * }} warehouse_parameters
  * @property {PrezoneVisuals} prezone_visuals
  * @property {PlcStation[]} plc_stations
@@ -194,8 +194,20 @@ export function importWarehouseConfiguration(jsonFile, validateWarehouseConfigur
             // Log essential import information only
             console.log('✅ Configuration imported:', jsonFile.name);
             
+            // Optional lightweight schema validation (no external deps). Lazy import to avoid bundling if unused.
+            try {
+                import('../infrastructure/config/schemaValidator.js').then(mod => {
+                    const schemaResult = mod.validateAgainstSchema(warehouseConfig);
+                    if (!schemaResult.valid) {
+                        throw new Error('Schema validation failed: ' + schemaResult.errors.join(', '));
+                    }
+                }).catch(e => console.warn('Schema validator module load failed (continuing):', e));
+            } catch (e) {
+                console.warn('Schema validation skipped:', e);
+            }
+
             if (!validateWarehouseConfiguration(warehouseConfig)) {
-                throw new Error('Invalid warehouse configuration format');
+                throw new Error('Legacy validation failed: invalid warehouse configuration format');
             }
 
             // Convert 1-based indices in missing_locations and buffer_locations to 0-based

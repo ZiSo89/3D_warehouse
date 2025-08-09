@@ -1,5 +1,6 @@
 // Camera controls and preset logic extracted from InteractionManager
 import * as THREE from 'three';
+
 import { getCameraViewConfig } from './uiUtils.js';
 
 export function bindCameraEvents(setCameraPreset) {

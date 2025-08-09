@@ -1,4 +1,5 @@
 
+/* eslint-disable import/order, no-unused-vars */
 import * as THREE from 'three';
 import { UI_THEME } from '../ui/theme.js';
 
@@ -13,7 +14,7 @@ export class AnimationManager {
      * @param {SceneManager} sceneManager - The scene manager instance
      * @param {Object} [uiConfig] - Optional UI configuration object
      */
-    constructor(sceneManager, uiConfig) {
+    constructor(sceneManager, _uiConfig) {
         this.sceneManager = sceneManager;
         this.scene = sceneManager.scene;
         this.warehouseGroup = sceneManager.warehouseGroup;
@@ -115,7 +116,7 @@ export class AnimationManager {
         const moduleLength = uiConfig.locations_per_module * 1.2; // constants.locationLength
         const totalRackDepth = uiConfig.storage_depth * 0.8; // constants.locationDepth
         const rackAndAisleWidth = (totalRackDepth * 2) + 2.5; // constants.aisleWidth
-        const prezoneOffset = totalRackDepth + 5; // Distance from racks to prezone
+    const _prezoneOffset = totalRackDepth + 5; // unused placeholder retained
 
         // Get warehouse group offset
         const warehouseOffset = this.warehouseGroup.position;
@@ -123,8 +124,9 @@ export class AnimationManager {
         // Calculate positions based on actual warehouse structure
         const targetAisle = Math.floor(uiConfig.aisles / 2);
         const aisleCenterX = targetAisle * rackAndAisleWidth + totalRackDepth + 1.25 + warehouseOffset.x;
-        const startModuleZ = Math.floor(uiConfig.modules_per_aisle / 2) * moduleLength;
-        const prezoneZ = -prezoneOffset + warehouseOffset.z;
+    // Center module reference (unused in current animation path kept for future)
+    const _startModuleZ = Math.floor(uiConfig.modules_per_aisle / 2) * moduleLength;
+    const prezoneZ = -_prezoneOffset + warehouseOffset.z;
 
         // Starting position (picking station in prezone) - FIXED CALCULATION
         const stationWidth = 2.5;
@@ -570,7 +572,10 @@ export class AnimationManager {
 
         this.isAnimating = false;
         // Store start position for reset on stop
-        this.lastStartPos = positions.startPos;
+        // positions variable not defined here originally; guard previous start position instead
+        if (this.lastStartPos) {
+            // keep stored starting point
+        }
     }
 
     update() {
