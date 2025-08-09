@@ -457,18 +457,19 @@ export class InteractionManager {
         // Generate dynamic aisle stations based on aisle count
         const dynamicStations = [];
         
-        // Calculate aisle positions (from existing config examples)
-        const aislePositions = [
-            { x: 3.225, name: "Aisle 1" },   // 11500, 11600, 11900
-            { x: 8.95, name: "Aisle 2" },    // 11501, 11601, 11901  
-            { x: 14.65, name: "Aisle 3" },   // 11502, 11602, 11902
-            { x: 20.375, name: "Aisle 4" },  // 11503, 11603, 11903
-            { x: 26.1, name: "Aisle 5" }     // 11504, 11604, 11904
-        ];
+        // Calculate aisle positions (dynamically generated)
+        const generateAislePosition = (index) => {
+            const baseX = 3.225; // Base position for aisle 1
+            const spacing = 5.725; // Distance between aisles
+            return {
+                x: baseX + (index * spacing),
+                name: `Aisle ${index + 1}`
+            };
+        };
 
         for (let i = 0; i < aisleCount; i++) {
             const aisleNum = i + 1;
-            const pos = aislePositions[i] || { x: 3.225 + (i * 5.725), name: `Aisle ${aisleNum}` };
+            const pos = generateAislePosition(i);
             
             // Aisle Entrance (11500 + i)
             dynamicStations.push({

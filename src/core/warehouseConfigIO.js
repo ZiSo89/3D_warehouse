@@ -49,8 +49,8 @@ export function exportWarehouseConfiguration(uiConfig, missingLocations, locatio
         metadata: {
             name: filename.replace('.json', ''),
             created: new Date().toISOString(),
-            version: '1.0.0',
-            description: 'Exported warehouse configuration'
+            version: '2.0.0',
+            description: 'Enhanced warehouse configuration with PLC prezone'
         },
         warehouse_parameters: {
             aisles: uiConfig.aisles,
@@ -60,13 +60,22 @@ export function exportWarehouseConfiguration(uiConfig, missingLocations, locatio
             storage_depth: uiConfig.storage_depth,
             picking_stations: uiConfig.picking_stations
         },
+        // Include prezone visuals with current ellipse dimensions (same structure as warehouse_config_instance)
+        prezone_visuals: uiConfig.prezone_visuals ? {
+            ellipse: {
+                position: { ...uiConfig.prezone_visuals.ellipse.position },
+                dimensions: { ...uiConfig.prezone_visuals.ellipse.dimensions }
+            }
+        } : {
+            ellipse: {
+                position: { x: 0, y: 0.0, z: -5.0 },
+                dimensions: { radiusX: 20.0, radiusZ: 2.0 }
+            }
+        },
+        // Include PLC stations (same structure as warehouse_config_instance)
+        plc_stations: uiConfig.plc_stations ? uiConfig.plc_stations.map(s => ({ ...s })) : [],
         missing_locations: [...convertedMissingLocations],
-        location_types: [...convertedLocationTypes],
-        calculated_metrics: {
-            total_locations: calculateTotalLocations(uiConfig, missingLocations),
-            total_modules: uiConfig.aisles * uiConfig.modules_per_aisle,
-            total_levels: uiConfig.levels_per_aisle.reduce((sum, levels) => sum + levels, 0)
-        }
+        location_types: [...convertedLocationTypes]
     };
 
     const jsonString = JSON.stringify(warehouseConfig, null, 2);
