@@ -7,46 +7,57 @@ A web-based 3D warehouse visualization and simulation tool built with Three.js. 
 - **3D Warehouse Visualization**: Interactive 3D representation of warehouse racks and infrastructure
 - **Dynamic Configuration**: Real-time adjustment of warehouse parameters:
   - Number of aisles (1-8)
-  - Levels per aisle (2-12, individually configurable)
-  - Modules per aisle (3-15)
-  - Locations per module (2-8)
-  - Storage depth (1-6)
-  - Picking stations (1-8)
-- **Container Animation System**: Realistic simulation of container flow from picking stations to storage racks
-  - Smooth container movement along conveyor systems
-  - Lift and shuttle operations synchronized
-  - Automated rack placement with precise positioning
+  - Levels per aisle (individually configurable)
+  - Modules per aisle
+  - Locations per module
+  - Storage depth
+  - Picking stations
+- **PLC Stations & Prezone Visuals**: Dynamically generated PLC stations (entrance, lift, fill reader) that scale with aisle count
 - **Camera Controls**: Multiple predefined camera views (Overview, Front, Side, Top, Aisle)
 - **Storage Capacity Calculator**: Real-time calculation of total storage locations
-- **Responsive UI**: Clean, modern interface with collapsible control panel
-- **Color-Coded Components**: 
-  - Racks in green tones
-  - Transport systems in red accents
-  - Light cream background for optimal contrast
+- **Responsive UI**: Collapsible control panel with JSON import/export
+- **Instanced Rendering & LOD**: Optimizations for large warehouses (advanced LOD + instanced racks)
+
+(NOTE: Legacy container flow / shuttle demo code referenced in earlier versions has been removed or simplified.)
 
 ## Project Structure
 
 ```
-├── index.html              # Main HTML file
-├── main.js                 # Application entry point (keyboard/game navigation, Vite entry)
-├── package.json            # Project dependencies
+├── index.html
+├── main.js
+├── package.json
+├── warehouse_config_instance.json
 └── src/
-    ├── animation/          # Animation system components
-    │   ├── AnimationManager.js
-    │   ├── Container.js
-    │   ├── CoordinatedOperations.js
-    │   └── DemoOperations.js
-    ├── components/         # 3D component creators
+    ├── animation/
+    │   └── AnimationManager.js
+    ├── components/
     │   ├── createPrezone.js
     │   ├── createRacks.js
-    │   └── createTransporters.js
-    ├── core/              # Core application logic
+    │   ├── createRacksInstanced.js
+    │   └── PLCStationManager.js
+    ├── core/
+    │   ├── AdvancedLODManager.js
     │   ├── constants.js
-    │   └── SceneManager.js
-    └── ui/                # User interface components
+    │   ├── locationUtils.js
+    │   ├── sceneCompass.js
+    │   ├── sceneLighting.js
+    │   ├── SceneManager.js
+    │   ├── TextureAtlasManager.js
+    │   ├── warehouseConfigIO.js
+    │   └── warehouseMetrics.js
+    └── ui/
+        ├── cameraControls.js
         ├── InteractionManager.js
-        └── UIManager.js    # UI panel, info overlay, capacity/missing display
+        ├── interactionPanel.js
+        ├── objectSelectionUtils.js
+        ├── PerformanceMonitorUI.js
+        ├── theme.js
+        ├── UIManager.js
+        └── uiUtils.js
 ```
+
+### Deprecated / Not Used
+- `src/core/FrustumCullingManager.js` (replaced by logic inside `AdvancedLODManager`)
 
 ## Getting Started
 
@@ -175,10 +186,10 @@ The warehouse configuration JSON file has the following structure:
 ## Technologies Used
 
 - **Three.js**: 3D graphics and rendering
-- **TWEEN.js**: Smooth animations and transitions
-- **JavaScript ES6+**: Modern JavaScript features and modules
-- **HTML5 & CSS3**: Structure and styling
-- **WebGL**: Hardware-accelerated 3D graphics
+- **JavaScript ES6+**: Modern JavaScript modules
+- **Vite**: Development server and bundler
+
+(Conditional animation demo code minimal; no external animation libs currently in active use.)
 
 ## Color Palette
 

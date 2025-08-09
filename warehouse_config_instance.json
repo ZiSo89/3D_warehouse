@@ -53,8 +53,8 @@
       },
       "plc_address": 11500,
       "directions": {
-        "straight": 11401,
-        "divert": 11600
+        "straight": 11600,
+        "divert": 11401
       }
     },
     {

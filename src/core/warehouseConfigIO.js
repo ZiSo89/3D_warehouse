@@ -1,7 +1,110 @@
 /**
  * Warehouse configuration export/import utilities.
- * @fileoverview Helper functions for exporting and importing warehouse configurations
+ * @fileoverview Helper functions for exporting and importing warehouse configurations.
+ * JSDoc typedefs are provided so editors & tooling (ESLint / TypeScript intellisense) can reason about
+ * the data structures without a TypeScript migration.
  */
+
+/**
+ * A single missing location descriptor (all indices 0-based internally).
+ * Any of the index properties can be -1 to indicate a wildcard / not specified.
+ * @typedef {Object} MissingLocation
+ * @property {number} [aisle]
+ * @property {number} [level]
+ * @property {number} [module]
+ * @property {number} [depth]
+ * @property {number} [position]
+ * @property {string} [side] Optional side info (e.g., 'left'/'right').
+ */
+
+/**
+ * Descriptor of a special location type override / custom definition.
+ * @typedef {Object} LocationTypeDescriptor
+ * @property {string} id Unique id / name.
+ * @property {number} [aisle]
+ * @property {number|number[]} [level]
+ * @property {number} [module]
+ * @property {number} [depth]
+ * @property {number|number[]} [position]
+ * @property {string} [category] UI grouping category.
+ * @property {Object<string,any>} [meta] Arbitrary metadata.
+ */
+
+/**
+ * Prezone ellipse shape.
+ * @typedef {Object} PrezoneEllipse
+ * @property {{x:number,y:number,z:number}} position
+ * @property {{radiusX:number,radiusZ:number}} dimensions
+ */
+
+/**
+ * Prezone visuals container.
+ * @typedef {Object} PrezoneVisuals
+ * @property {PrezoneEllipse} ellipse
+ */
+
+/**
+ * PLC Station descriptor.
+ * @typedef {Object} PlcStation
+ * @property {number} id Station numeric id.
+ * @property {string} type Station type (e.g. 'SimpleStation','EvoLift').
+ * @property {string} [description]
+ * @property {string} [group]
+ */
+
+/**
+ * UI configuration object used by the editor / scene before export.
+ * @typedef {Object} UIConfig
+ * @property {number} aisles
+ * @property {number[]} levels_per_aisle Array length equals aisles.
+ * @property {number} modules_per_aisle
+ * @property {number} locations_per_module
+ * @property {number} storage_depth Storage depth per location (e.g., 1,2,3).
+ * @property {number} picking_stations Total picking stations.
+ * @property {PrezoneVisuals} [prezone_visuals]
+ * @property {PlcStation[]} [plc_stations]
+ */
+
+/**
+ * The object shape written to JSON during export.
+ * @typedef {Object} WarehouseConfig
+ * @property {{name:string,created:string,version:string,description:string}} metadata
+ * @property {{
+ *  aisles:number,
+ *  levels_per_aisle:number[],
+ *  modules_per_aisle:number,
+ *  locations_per_module:number,
+ *  storage_depth:number,
+ *  picking_stations:number
+ * }} warehouse_parameters
+ * @property {PrezoneVisuals} prezone_visuals
+ * @property {PlcStation[]} plc_stations
+ * @property {MissingLocation[]} missing_locations
+ * @property {LocationTypeDescriptor[]} location_types
+ */
+
+/**
+ * Convert one-based indices (as exposed to external JSON) to zero-based internal form.
+ * Leaves -1 (wildcard) values untouched.
+ * @param {Record<string,any>} obj
+ * @param {string[]} keys Index-like keys to convert.
+ * @param {1|-1} direction +1 to convert 0->1 (export), -1 to convert 1->0 (import)
+ * @returns {Record<string,any>} Mutated shallow clone.
+ */
+function convertIndexFields(obj, keys, direction) {
+    const newObj = { ...obj };
+    for (const key of keys) {
+        const value = newObj[key];
+        if (typeof value === 'number' && value !== -1) {
+            newObj[key] = value + direction;
+        } else if (Array.isArray(value)) {
+            newObj[key] = value.map(v => (typeof v === 'number' && v !== -1 ? v + direction : v));
+        }
+    }
+    return newObj;
+}
+
+const INDEX_KEYS = ['aisle', 'level', 'module', 'depth', 'position'];
 
 /**
  * Exports the warehouse configuration as a JSON file and returns the config object.
@@ -13,38 +116,13 @@
  * @returns {Object} The warehouse configuration object
  */
 export function exportWarehouseConfiguration(uiConfig, missingLocations, locationTypes, calculateTotalLocations, filename = 'warehouse_config.json') {
-    // Convert internal 0-based indices to 1-based for JSON export
-    const convertedMissingLocations = missingLocations.map(loc => {
-        if (loc && typeof loc === 'object') {
-            const newLoc = { ...loc };
-            ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
-                if (typeof newLoc[key] === 'number' && newLoc[key] !== -1) {
-                    newLoc[key] = newLoc[key] + 1;
-                }
-            });
-            return newLoc;
-        }
-        return loc;
-    });
+    /** @type {MissingLocation[]} */
+    const convertedMissingLocations = missingLocations.map(loc => (loc && typeof loc === 'object' ? convertIndexFields(loc, INDEX_KEYS, +1) : loc));
 
-    const convertedLocationTypes = (Array.isArray(locationTypes) ? locationTypes : []).map(loc => {
-        if (loc && typeof loc === 'object') {
-            const newLoc = { ...loc };
-            ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
-                if (typeof newLoc[key] === 'number' && newLoc[key] !== -1) {
-                    newLoc[key] = newLoc[key] + 1;
-                } else if (Array.isArray(newLoc[key])) {
-                    // Convert arrays from 0-based to 1-based
-                    newLoc[key] = newLoc[key].map(val => 
-                        typeof val === 'number' && val !== -1 ? val + 1 : val
-                    );
-                }
-            });
-            return newLoc;
-        }
-        return loc;
-    });
+    /** @type {LocationTypeDescriptor[]} */
+    const convertedLocationTypes = (Array.isArray(locationTypes) ? locationTypes : []).map(loc => (loc && typeof loc === 'object' ? convertIndexFields(loc, INDEX_KEYS, +1) : loc));
 
+    /** @type {WarehouseConfig} */
     const warehouseConfig = {
         metadata: {
             name: filename.replace('.json', ''),
@@ -122,46 +200,10 @@ export function importWarehouseConfiguration(jsonFile, validateWarehouseConfigur
 
             // Convert 1-based indices in missing_locations and buffer_locations to 0-based
             if (Array.isArray(warehouseConfig.missing_locations)) {
-                warehouseConfig.missing_locations = warehouseConfig.missing_locations.map(loc => {
-                    // If loc is an object with index fields, convert them
-                    if (loc && typeof loc === 'object') {
-                        const newLoc = { ...loc };
-                        ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
-                            if (typeof newLoc[key] === 'number') {
-                                newLoc[key] = newLoc[key] - 1;
-                            } else if (Array.isArray(newLoc[key])) {
-                                // Convert arrays from 1-based to 0-based
-                                newLoc[key] = newLoc[key].map(val => 
-                                    typeof val === 'number' ? val - 1 : val
-                                );
-                            }
-                        });
-                        return newLoc;
-                    }
-                    return loc;
-                });
+                warehouseConfig.missing_locations = warehouseConfig.missing_locations.map(loc => (loc && typeof loc === 'object' ? convertIndexFields(loc, INDEX_KEYS, -1) : loc));
             }
-            if (
-                warehouseConfig.location_types &&
-                Array.isArray(warehouseConfig.location_types)
-            ) {
-                warehouseConfig.location_types = warehouseConfig.location_types.map(loc => {
-                    if (loc && typeof loc === 'object') {
-                        const newLoc = { ...loc };
-                        ['aisle', 'level', 'module', 'depth', 'position'].forEach(key => {
-                            if (typeof newLoc[key] === 'number') {
-                                newLoc[key] = newLoc[key] - 1;
-                            } else if (Array.isArray(newLoc[key])) {
-                                // Convert arrays from 1-based to 0-based
-                                newLoc[key] = newLoc[key].map(val => 
-                                    typeof val === 'number' ? val - 1 : val
-                                );
-                            }
-                        });
-                        return newLoc;
-                    }
-                    return loc;
-                });
+            if (warehouseConfig.location_types && Array.isArray(warehouseConfig.location_types)) {
+                warehouseConfig.location_types = warehouseConfig.location_types.map(loc => (loc && typeof loc === 'object' ? convertIndexFields(loc, INDEX_KEYS, -1) : loc));
             }
 
             // If you have other index arrays to convert, add them here
