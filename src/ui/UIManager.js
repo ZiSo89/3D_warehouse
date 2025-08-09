@@ -50,8 +50,8 @@ export class UIManager {
         this.sceneManager = sceneManager;
         this.uiConfig = {
             aisles: 3,
-            levels_per_aisle: [5, 6, 4],
-            modules_per_aisle: 8,
+            levels_per_aisle: [9, 5, 3],
+            modules_per_aisle: 6,
             locations_per_module: 4,
             storage_depth: 2,
             picking_stations: 3,

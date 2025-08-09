@@ -1,25 +1,7 @@
 /**
  * PLC Station Manager for warehouse prezone visualization
  * Handles creation and management of PLC stations and conveyor routing
- * @fileoverview Advanced PLC station system with visual genera        // *** ALL PNEUMATIC CYLINDERS DISABLED ***
-        const isConnectedToMainLoop = stationData.directions && 
-                                     (stationData.directions.straight === 11401 || stationData.directions.divert === 11401);
-        
-        console.log(`🚫🚫🚫 Station ${stationData.plc_address}: ALL PNEUMATIC CYLINDERS COMPLETELY DISABLED! NO CYLINDERS WILL BE CREATED! 🚫🚫🚫`);
-        console.log(`🔗 Station ${stationData.plc_address}: Connected to main loop (11401) = ${isConnectedToMainLoop}`);
-
-        // Force disable any cylinder creation
-        const FORCE_DISABLE_ALL_CYLINDERS = true;
-        if (FORCE_DISABLE_ALL_CYLINDERS) {
-            console.log(`⛔ FORCE DISABLED: No pneumatic cylinders for ANY station including ${stationData.plc_address}`);
-            if (isConnectedToMainLoop) {
-                console.log(`🎯 Station ${stationData.plc_address} is connected to main loop 11401 - extra clean look`);
-            }
-            // Intentionally skip ALL cylinder creation
-        }
-
-        // Direction indicators
-        this.addDirectionIndicators(group, stationData);
+ * @fileoverview Advanced PLC station system with visual representation
  */
 
 import * as THREE from 'three';
@@ -67,9 +49,6 @@ export class PLCStationManager {
         
         // Extract the third digit (Station Type)
         const stationTypeDigit = parseInt(addressStr[2]);
-        
-        // Log for debugging
-        console.log(`🔍 Analyzing PLC ${plcAddress}: Floor=${addressStr[0]}, Level=${addressStr[1]}, Type=${stationTypeDigit}, Counter=${addressStr.slice(3)}`);
         
         switch (stationTypeDigit) {
             case 4:
@@ -173,22 +152,14 @@ export class PLCStationManager {
         const group = new THREE.Group();
         group.name = `LoopSwitch_${stationData.plc_address}`;
 
-        // Main switch body
-        const bodyGeometry = new THREE.BoxGeometry(1.2, 0.3, 0.8);
-        const bodyMesh = new THREE.Mesh(bodyGeometry, this.materials.loopSwitch);
-        bodyMesh.position.set(0, 0.15, 0);
-        group.add(bodyMesh);
-
-        // Switch arm removed for cleaner look
-
-        // Direction indicators
-        this.addDirectionIndicators(group, stationData);
+        // Simple box for loop switch
+        const boxGeometry = new THREE.BoxGeometry(1.2, 0.4, 0.8);
+        const boxMesh = new THREE.Mesh(boxGeometry, this.materials.loopSwitch);
+        boxMesh.position.set(0, 0.2, 0);
+        group.add(boxMesh);
 
         // Station label
         this.addStationLabel(group, stationData);
-
-        // Base plate
-        this.addBasePlate(group);
 
         // Store metadata
         group.userData = { 
@@ -209,25 +180,14 @@ export class PLCStationManager {
         const group = new THREE.Group();
         group.name = `Diverter_${stationData.plc_address}`;
 
-        // Main diverter housing
-        const housingGeometry = new THREE.BoxGeometry(1.0, 0.4, 1.2);
-        const housingMesh = new THREE.Mesh(housingGeometry, this.materials.diverter);
-        housingMesh.position.set(0, 0.2, 0);
-        group.add(housingMesh);
-
-        // Diverter blade removed for cleaner look
-
-        // Pneumatic cylinders completely removed for cleaner look
-        console.log(`� No pneumatic cylinder added to station ${stationData.plc_address} - all cylinders disabled`);
-
-        // Direction indicators
-        this.addDirectionIndicators(group, stationData);
+        // Simple box for diverter
+        const boxGeometry = new THREE.BoxGeometry(1.0, 0.4, 1.2);
+        const boxMesh = new THREE.Mesh(boxGeometry, this.materials.diverter);
+        boxMesh.position.set(0, 0.2, 0);
+        group.add(boxMesh);
 
         // Station label
         this.addStationLabel(group, stationData);
-
-        // Base plate
-        this.addBasePlate(group);
 
         // Store metadata
         group.userData = { 
@@ -248,29 +208,11 @@ export class PLCStationManager {
         const group = new THREE.Group();
         group.name = `Sensor_${stationData.plc_address}`;
 
-        // Sensor head
-        const headGeometry = new THREE.SphereGeometry(0.12, 16, 16);
-        const headMesh = new THREE.Mesh(headGeometry, this.materials.sensor);
-        headMesh.position.set(0, 0.3, 0);
-        group.add(headMesh);
-
-        // Mounting bracket
-        const bracketGeometry = new THREE.BoxGeometry(0.1, 0.4, 0.1);
-        const bracketMesh = new THREE.Mesh(bracketGeometry, new THREE.MeshLambertMaterial({ color: 0x718096 }));
-        bracketMesh.position.set(0, 0.1, 0);
-        group.add(bracketMesh);
-
-        // Detection beam (laser line)
-        const beamGeometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(-2, 0.3, 0),
-            new THREE.Vector3(2, 0.3, 0)
-        ]);
-        const beamLine = new THREE.Line(beamGeometry, new THREE.LineBasicMaterial({ 
-            color: 0xFF0000,
-            transparent: true,
-            opacity: 0.3
-        }));
-        group.add(beamLine);
+        // Simple box for sensor
+        const boxGeometry = new THREE.BoxGeometry(0.6, 0.4, 0.3);
+        const boxMesh = new THREE.Mesh(boxGeometry, this.materials.sensor);
+        boxMesh.position.set(0, 0.2, 0);
+        group.add(boxMesh);
 
         // Station label
         this.addStationLabel(group, stationData);
@@ -291,42 +233,17 @@ export class PLCStationManager {
      * @returns {THREE.Group} 3D object group
      */
     createFillReader(stationData) {
-        console.log('📖 Creating Fill Reader:', stationData.name);
-        console.log('📍 Position data:', stationData.position);
-        console.log('🏷️ PLC Address:', stationData.plc_address);
-        
         const group = new THREE.Group();
         group.name = `FillReader_${stationData.plc_address}`;
 
-        // Scanner unit
-        const scannerGeometry = new THREE.BoxGeometry(0.8, 0.6, 0.4);
-        const scannerMesh = new THREE.Mesh(scannerGeometry, this.materials.fillReader);
-        scannerMesh.position.set(0, 0.3, 0);
-        group.add(scannerMesh);
-        console.log('✅ Scanner unit created');
-
-        // Scanning window
-        const windowGeometry = new THREE.PlaneGeometry(0.6, 0.4);
-        const windowMesh = new THREE.Mesh(windowGeometry, new THREE.MeshLambertMaterial({ 
-            color: 0x00FFFF,
-            transparent: true,
-            opacity: 0.3
-        }));
-        windowMesh.position.set(0, 0.3, 0.21);
-        group.add(windowMesh);
-        console.log('✅ Scanning window added');
-
-        // Laser grid pattern
-        this.addScanningGrid(group);
-        console.log('✅ Scanning grid added');
+        // Simple box for fill reader
+        const boxGeometry = new THREE.BoxGeometry(0.8, 0.4, 0.6);
+        const boxMesh = new THREE.Mesh(boxGeometry, this.materials.fillReader);
+        boxMesh.position.set(0, 0.2, 0);
+        group.add(boxMesh);
 
         // Station label
         this.addStationLabel(group, stationData);
-        console.log('✅ Station label added');
-
-        // Base plate
-        this.addBasePlate(group);
-        console.log('✅ Base plate added');
 
         // Store metadata
         group.userData = { 
@@ -335,9 +252,6 @@ export class PLCStationManager {
             stationData: stationData,
             name: stationData.name
         };
-        
-        console.log('✅ Fill Reader creation completed for:', stationData.name);
-        console.log('🎯 Final group children count:', group.children.length);
 
         return group;
     }
@@ -351,28 +265,14 @@ export class PLCStationManager {
         const group = new THREE.Group();
         group.name = `AisleEntrance_${stationData.plc_address}`;
 
-        // Main entrance gate
-        const gateGeometry = new THREE.BoxGeometry(2.0, 0.5, 0.3);
-        const gateMesh = new THREE.Mesh(gateGeometry, new THREE.MeshLambertMaterial({ color: 0x3182CE }));
-        gateMesh.position.set(0, 0.25, 0);
-        group.add(gateMesh);
-
-        // Entrance arch
-        const archGeometry = new THREE.BoxGeometry(0.2, 2.0, 0.3);
-        const leftArch = new THREE.Mesh(archGeometry, new THREE.MeshLambertMaterial({ color: 0x2C5282 }));
-        leftArch.position.set(-1.1, 1.0, 0);
-        const rightArch = new THREE.Mesh(archGeometry, new THREE.MeshLambertMaterial({ color: 0x2C5282 }));
-        rightArch.position.set(1.1, 1.0, 0);
-        group.add(leftArch, rightArch);
-
-        // Direction indicators
-        this.addDirectionIndicators(group, stationData);
+        // Simple box for aisle entrance
+        const boxGeometry = new THREE.BoxGeometry(1.5, 0.5, 0.8);
+        const boxMesh = new THREE.Mesh(boxGeometry, new THREE.MeshLambertMaterial({ color: 0x3182CE }));
+        boxMesh.position.set(0, 0.25, 0);
+        group.add(boxMesh);
 
         // Station label
         this.addStationLabel(group, stationData);
-
-        // Base plate
-        this.addBasePlate(group);
 
         // Store metadata
         group.userData = { 
@@ -390,43 +290,17 @@ export class PLCStationManager {
      * @returns {THREE.Group} 3D object group
      */
     createLiftStation(stationData) {
-        console.log('🏗️ Creating Lift Station:', stationData.name);
-        console.log('📍 Position data:', stationData.position);
-        console.log('🏷️ PLC Address:', stationData.plc_address);
-        
         const group = new THREE.Group();
         group.name = `LiftStation_${stationData.plc_address}`;
 
-        // Lift platform
-        const platformGeometry = new THREE.BoxGeometry(1.5, 0.2, 1.5);
-        const platformMesh = new THREE.Mesh(platformGeometry, new THREE.MeshLambertMaterial({ color: 0x38B2AC }));
-        platformMesh.position.set(0, 0.1, 0);
-        group.add(platformMesh);
-        console.log('✅ Platform created and added');
-
-        // Lift shaft indicators
-        const shaftGeometry = new THREE.BoxGeometry(0.1, 3.0, 0.1);
-        const corners = [
-            new THREE.Vector3(-0.7, 1.5, -0.7),
-            new THREE.Vector3(0.7, 1.5, -0.7),
-            new THREE.Vector3(-0.7, 1.5, 0.7),
-            new THREE.Vector3(0.7, 1.5, 0.7)
-        ];
-        
-        corners.forEach((pos, index) => {
-            const shaft = new THREE.Mesh(shaftGeometry, new THREE.MeshLambertMaterial({ color: 0x2C7A7B }));
-            shaft.position.copy(pos);
-            group.add(shaft);
-        });
-        console.log('✅ Shaft indicators created (4 corners)');
-
-        // Direction indicators
-        this.addDirectionIndicators(group, stationData);
-        console.log('✅ Direction indicators added');
+        // Simple box for lift station
+        const boxGeometry = new THREE.BoxGeometry(1.5, 0.4, 1.5);
+        const boxMesh = new THREE.Mesh(boxGeometry, new THREE.MeshLambertMaterial({ color: 0x38B2AC }));
+        boxMesh.position.set(0, 0.2, 0);
+        group.add(boxMesh);
 
         // Station label
         this.addStationLabel(group, stationData);
-        console.log('✅ Station label added');
 
         // Store metadata
         group.userData = { 
@@ -435,9 +309,6 @@ export class PLCStationManager {
             stationData: stationData,
             name: stationData.name
         };
-        
-        console.log('✅ Lift Station creation completed for:', stationData.name);
-        console.log('🎯 Final group children count:', group.children.length);
         
         return group;
     }
@@ -451,24 +322,11 @@ export class PLCStationManager {
         const group = new THREE.Group();
         group.name = `PickingStation_${stationData.plc_address}`;
 
-        // Workstation desk
-        const deskGeometry = new THREE.BoxGeometry(2.0, 0.1, 1.0);
-        const deskMesh = new THREE.Mesh(deskGeometry, new THREE.MeshLambertMaterial({ color: 0xE53E3E }));
-        deskMesh.position.set(0, 0.8, 0);
-        group.add(deskMesh);
-
-        // Support legs
-        const legGeometry = new THREE.BoxGeometry(0.1, 0.8, 0.1);
-        const legPositions = [
-            [-0.9, 0.4, -0.4], [0.9, 0.4, -0.4],
-            [-0.9, 0.4, 0.4], [0.9, 0.4, 0.4]
-        ];
-        
-        legPositions.forEach(pos => {
-            const leg = new THREE.Mesh(legGeometry, new THREE.MeshLambertMaterial({ color: 0xC53030 }));
-            leg.position.set(...pos);
-            group.add(leg);
-        });
+        // Simple box for picking station
+        const boxGeometry = new THREE.BoxGeometry(2.0, 0.4, 1.0);
+        const boxMesh = new THREE.Mesh(boxGeometry, new THREE.MeshLambertMaterial({ color: 0xE53E3E }));
+        boxMesh.position.set(0, 0.2, 0);
+        group.add(boxMesh);
 
         // Station label
         this.addStationLabel(group, stationData);
@@ -512,52 +370,24 @@ export class PLCStationManager {
     }
 
     /**
-     * Adds direction indicators to station
+     * Adds direction indicators to station (simplified - no complex shapes)
      * @param {THREE.Group} group - Station group
      * @param {Object} stationData - Station configuration
      */
     addDirectionIndicators(group, stationData) {
-        const directions = stationData.directions;
-
-        // Straight arrow
-        if (directions.straight) {
-            const straightArrow = this.createArrow(0x48BB78, 'straight');
-            straightArrow.position.set(0, 0.6, 0.3);
-            group.add(straightArrow);
-        }
-
-        // Divert arrow
-        if (directions.divert) {
-            const divertArrow = this.createArrow(0xF56500, 'divert');
-            divertArrow.position.set(0.3, 0.6, 0);
-            divertArrow.rotation.y = Math.PI / 2;
-            group.add(divertArrow);
-        }
+        // Simplified - no complex arrow indicators
+        return;
     }
 
     /**
-     * Creates an arrow indicator
+     * Creates an arrow indicator (simplified - returns empty group)
      * @param {number} color - Arrow color
      * @param {string} type - Arrow type ('straight' or 'divert')
-     * @returns {THREE.Group} Arrow mesh group
+     * @returns {THREE.Group} Empty group
      */
     createArrow(color, type) {
-        const group = new THREE.Group();
-
-        // Arrow shaft
-        const shaftGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
-        const shaftMesh = new THREE.Mesh(shaftGeometry, new THREE.MeshLambertMaterial({ color }));
-        shaftMesh.rotation.z = Math.PI / 2;
-        group.add(shaftMesh);
-
-        // Arrow head
-        const headGeometry = new THREE.ConeGeometry(0.05, 0.1, 8);
-        const headMesh = new THREE.Mesh(headGeometry, new THREE.MeshLambertMaterial({ color }));
-        headMesh.rotation.z = -Math.PI / 2;
-        headMesh.position.set(0.2, 0, 0);
-        group.add(headMesh);
-
-        return group;
+        // Simplified - return empty group
+        return new THREE.Group();
     }
 
     /**
@@ -599,51 +429,21 @@ export class PLCStationManager {
     }
 
     /**
-     * Adds base plate to station
+     * Adds base plate to station (simplified - no extra shapes)
      * @param {THREE.Group} group - Station group
      */
     addBasePlate(group) {
-        const plateGeometry = new THREE.BoxGeometry(1.4, 0.05, 1.4);
-        const plateMesh = new THREE.Mesh(plateGeometry, new THREE.MeshLambertMaterial({ color: 0x4A5568 }));
-        plateMesh.position.set(0, -0.025, 0);
-        group.add(plateMesh);
+        // Simplified - no base plate
+        return;
     }
 
     /**
-     * Adds scanning grid to fill reader
+     * Adds scanning grid to fill reader (simplified - no complex shapes)
      * @param {THREE.Group} group - Fill reader group
      */
     addScanningGrid(group) {
-        const gridGroup = new THREE.Group();
-        
-        // Create grid lines
-        for (let i = -0.2; i <= 0.2; i += 0.1) {
-            // Vertical lines
-            const vGeometry = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(i, 0.1, 0.22),
-                new THREE.Vector3(i, 0.5, 0.22)
-            ]);
-            const vLine = new THREE.Line(vGeometry, new THREE.LineBasicMaterial({ 
-                color: 0x00FFFF,
-                transparent: true,
-                opacity: 0.5
-            }));
-            gridGroup.add(vLine);
-
-            // Horizontal lines
-            const hGeometry = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(-0.2, 0.3 + i, 0.22),
-                new THREE.Vector3(0.2, 0.3 + i, 0.22)
-            ]);
-            const hLine = new THREE.Line(hGeometry, new THREE.LineBasicMaterial({ 
-                color: 0x00FFFF,
-                transparent: true,
-                opacity: 0.5
-            }));
-            gridGroup.add(hLine);
-        }
-        
-        group.add(gridGroup);
+        // Simplified - no scanning grid
+        return;
     }
 
     /**
@@ -738,47 +538,34 @@ export class PLCStationManager {
      * @returns {THREE.Group} Complete prezone group
      */
     generatePrezone(plcStations) {
-        console.log('🏭 PLCStationManager: Starting SRC-compliant prezone generation...');
-        console.log('📊 Stations to process:', plcStations);
-        
         const prezoneGroup = new THREE.Group();
         prezoneGroup.name = 'SRC_PLCPrezone';
 
         // Create all PLC stations with SRC analysis
         plcStations.forEach((stationData, index) => {
-            console.log(`🔧 Processing station ${index + 1}/${plcStations.length}:`, stationData.name);
-            
             // Analyze using SRC convention
             const analysis = this.analyzeStationAddress(stationData.plc_address);
-            console.log(`📡 SRC Analysis:`, analysis);
             
             let stationMesh;
-            const visualConfig = analysis.visualConfig;
 
             // Create station based on SRC type
             switch (analysis.stationType) {
                 case 'helper_station':
-                    console.log('🔄 Creating helper station (loop switch)...');
                     stationMesh = this.createLoopSwitch(stationData);
                     break;
                 case 'aisle_entrance':
-                    console.log('🚪 Creating aisle entrance...');
                     stationMesh = this.createAisleEntrance(stationData);
                     break;
                 case 'lift_station':
-                    console.log('� Creating lift station...');
                     stationMesh = this.createLiftStation(stationData);
                     break;
                 case 'picking_diverter':
-                    console.log('↗️ Creating picking diverter...');
                     stationMesh = this.createDiverter(stationData);
                     break;
                 case 'picking_station':
-                    console.log('👷 Creating picking station...');
                     stationMesh = this.createPickingStation(stationData);
                     break;
                 case 'lift_reading_point':
-                    console.log('📖 Creating lift reading point...');
                     stationMesh = this.createFillReader(stationData);
                     break;
                 default:
@@ -797,33 +584,18 @@ export class PLCStationManager {
             // Add SRC metadata
             stationMesh.userData.srcAnalysis = analysis;
             
-            console.log(`📍 Positioned ${analysis.visualConfig.description} at (${stationData.position.x}, ${stationData.position.y}, ${stationData.position.z})`);
-            
-            // VERIFICATION: Get world position after adding to group
             prezoneGroup.add(stationMesh);
-            
-            // Get world position for verification
-            const worldPos = new THREE.Vector3();
-            stationMesh.getWorldPosition(worldPos);
-            console.log(`🌍 World position after adding to group: (${worldPos.x.toFixed(3)}, ${worldPos.y.toFixed(3)}, ${worldPos.z.toFixed(3)})`);
             
             this.stations.set(stationData.plc_address, {
                 data: stationData,
                 mesh: stationMesh,
                 analysis: analysis
             });
-            
-            console.log(`✅ ${analysis.visualConfig.description} ${stationData.name} created and added`);
-            console.log(`🔍 Station mesh children count: ${stationMesh.children.length}`);
-            console.log(`🎯 Can be selected: ${stationMesh.userData ? 'YES' : 'NO'}`);
-            console.log('---');
         });
 
-        console.log('🛤️ Generating SRC-compliant conveyor connections...');
         // Generate conveyor connections
         this.generateConveyorConnections(plcStations, prezoneGroup);
 
-        console.log(`🎉 SRC PLC prezone generation complete! Created ${plcStations.length} stations`);
         return prezoneGroup;
     }
 
@@ -841,7 +613,8 @@ export class PLCStationManager {
         plcStations.forEach(station => {
             const directions = station.directions;
 
-            // Create straight path
+            // Create straight path - DISABLED: Conveyors handled by createStationConnections
+            /*
             if (directions.straight) {
                 const targetStation = stationMap.get(directions.straight);
                 if (targetStation) {
@@ -850,7 +623,7 @@ export class PLCStationManager {
                 }
             }
 
-            // Create divert path
+            // Create divert path - DISABLED: Conveyors handled by createStationConnections
             if (directions.divert) {
                 const targetStation = stationMap.get(directions.divert);
                 if (targetStation) {
@@ -858,6 +631,7 @@ export class PLCStationManager {
                     prezoneGroup.add(conveyorSegment);
                 }
             }
+            */
         });
     }
 
@@ -879,7 +653,6 @@ export class PLCStationManager {
         const station = this.getStation(plcAddress);
         if (station) {
             // Update visual indicators based on state
-            console.log(`🔄 Updating PLC station ${plcAddress} state:`, state);
         }
     }
 }

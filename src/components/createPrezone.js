@@ -12,17 +12,84 @@ function decodePlc(plc) {
     return { floor, level, type: typeMap[typeDigit] || 'unknown', counter };
 }
 
+// Dynamic PLC station generation based on picking stations count
+function updatePLCStationsForPickingStations(uiConfig) {
+    const pickingStationsCount = uiConfig.picking_stations || 3;
+    
+    // Keep existing stations that are not picking-related
+    let existingStations = [];
+    if (uiConfig.plc_stations && Array.isArray(uiConfig.plc_stations)) {
+        // Keep stations that are not picking diverters (11700-11799) or picking stations (11800-11899)
+        existingStations = uiConfig.plc_stations.filter(station => {
+            const plc = station.plc_address;
+            const isPickingDiverter = plc >= 11700 && plc <= 11799;
+            const isPickingStation = plc >= 11800 && plc <= 11899;
+            return !isPickingDiverter && !isPickingStation;
+        });
+    }
+    
+    // Generate picking stations dynamically
+    const pickingStations = [];
+    
+    for (let i = 0; i < pickingStationsCount; i++) {
+        // Position picking diverters on a line for main loop connection
+        const diverterX = -15 + (i * 7); // Spread diverters along X axis for main loop
+        const diverterZ = -8; // Keep them in a line for main loop
+        
+        // Position picking stations in a line like the existing Picking Station 1
+        const stationX = -15 + (i * 7); // Same X spacing as diverters but different Z
+        const stationZ = -14; // Same Z as existing Picking Station 1
+        
+        // Add picking diverter for this station (connected to main loop)
+        pickingStations.push({
+            "name": `Picking Diverter ${i + 1}`,
+            "plc_address": 11700 + i,
+            "position": { "x": diverterX, "y": 0.15, "z": diverterZ },
+            "directions": { "straight": 11401, "divert": 11800 + i } // 11800, 11801, 11802, etc.
+        });
+        
+        // Add picking station - DO NOT connect directly to main loop (11401)
+        pickingStations.push({
+            "name": `Picking Station ${i + 1}`,
+            "plc_address": 11800 + i, // Start from 11800 (11800 + 0)
+            "position": { "x": stationX, "y": 0.15, "z": stationZ },
+            "directions": { "straight": null, "divert": null } // No connection to main loop
+        });
+    }
+
+    // Combine existing stations with new picking stations
+    uiConfig.plc_stations = [...existingStations, ...pickingStations];
+    
+    // Update ellipse radiusX to accommodate more stations and aisles
+    if (uiConfig.prezone_visuals && uiConfig.prezone_visuals.ellipse) {
+        const baseRadiusX = 15.0;
+        
+        // Scale based on picking stations count
+        const pickingStationRadius = Math.max(0, (pickingStationsCount - 3) * 2.0); // 2 units per additional station
+        
+        // Scale based on aisles count (main loop should expand with more aisles)
+        const aisleCount = uiConfig.aisles || 3;
+        const aisleRadius = Math.max(0, (aisleCount - 3) * 3.0); // 3 units per additional aisle
+        
+        // Combined radius for both picking stations and aisles
+        const totalAdditionalRadius = pickingStationRadius + aisleRadius;
+        uiConfig.prezone_visuals.ellipse.dimensions.radiusX = baseRadiusX + totalAdditionalRadius;
+        
+        console.log(`[Dynamic Ellipse] Picking stations: ${pickingStationsCount}, Aisles: ${aisleCount}, RadiusX: ${baseRadiusX + totalAdditionalRadius}`);
+    }
+}
+
 // ------------------------------------------------------------
 // Main entry (loop removed) + simple ellipse bar
 // ------------------------------------------------------------
 export function createPrezone(uiConfig, constants) {
-    console.log('🔧 Creating prezone with config:', uiConfig);
-    console.log('🏭 PLC stations in config:', uiConfig.plc_stations);
-
     const prezoneGroup = new THREE.Group();
     prezoneGroup.name = 'PrezoneGroup';
 
     if (uiConfig.plc_stations && uiConfig.plc_stations.length > 0) {
+        // Update PLC stations for picking stations count
+        updatePLCStationsForPickingStations(uiConfig);
+        
         uiConfig.plc_stations.forEach(st => { st._decoded = decodePlc(st.plc_address); });
         const filteredStations = uiConfig.plc_stations.filter(s => s.plc_address !== 11401);
         const plcManager = new PLCStationManager();
@@ -30,10 +97,10 @@ export function createPrezone(uiConfig, constants) {
         prezoneGroup.add(plcPrezone);
         // Create simple ellipse bar (visual only), now reading from uiConfig
         createSimpleEllipseBar(prezoneGroup, filteredStations, uiConfig);
-        // Create connections to main loop (11401) 
+        // Create connections to main loop (11401) for positioning stations on ellipse
         createMainLoopConnections(prezoneGroup, filteredStations, uiConfig);
-        // Station connections disabled - existing conveyors will be used
-        // createStationConnections(prezoneGroup, filteredStations);
+        // Create station connections for dynamic conveyor system
+        createStationConnections(prezoneGroup, filteredStations);
     } else {
         createPickingStation(prezoneGroup, uiConfig);
         createMultiLiftConveyorSystem(prezoneGroup, uiConfig, constants);
@@ -186,7 +253,6 @@ function createSupportPillars(parent, liftX, startZ, endZ, lowerLevel, upperLeve
 function createConveyorSegment(parent, startPoint, endPoint, segmentName, flowType = 'general') {
     const DISABLED = false; // set true to hide conveyors
     if (DISABLED) {
-        console.log(`🚫 Conveyor skipped: ${segmentName}`);
         return;
     }
 
@@ -230,10 +296,14 @@ function createConveyorSegment(parent, startPoint, endPoint, segmentName, flowTy
 function createStationConnections(parent, stations) {
     stations.forEach(st => {
         if (st.plc_address === 11401 || !st.directions) return;
+        
+        // Create straight connections (but skip if going to main loop 11401)
         if (st.directions.straight && st.directions.straight !== 11401) {
             const target = stations.find(s => s.plc_address === st.directions.straight);
             if (target) createStationToStationConnection(parent, st, target, 'straight');
         }
+        
+        // Create divert connections (but skip if going to main loop 11401)
         if (st.directions.divert && st.directions.divert !== 11401) {
             const target = stations.find(s => s.plc_address === st.directions.divert);
             if (target) createStationToStationConnection(parent, st, target, 'divert');
@@ -251,22 +321,19 @@ function createStationToStationConnection(parent, fromStation, toStation, connec
 
 // Position ellipse between picking/aisle stations, or use JSON config if available
 function createSimpleEllipseBar(parent, stations, uiConfig) {
-    console.log('[Ellipse] createSimpleEllipseBar called with prezone_visuals:', uiConfig.prezone_visuals);
     let centerX, centerZ, centerY, radiusX, radiusZ;
 
     const visualEllipseConfig = uiConfig.prezone_visuals?.ellipse;
 
     if (visualEllipseConfig && visualEllipseConfig.dimensions && visualEllipseConfig.position) {
-        console.log('[Ellipse] Using configuration from JSON.');
         const pos = visualEllipseConfig.position;
         const dims = visualEllipseConfig.dimensions;
         centerX = pos.x;
         centerY = pos.y;
         centerZ = pos.z;
-        radiusX = dims.radiusX;
+        radiusX = dims.radiusX; // This will now be the updated radiusX from updatePLCStationsForPickingStations
         radiusZ = dims.radiusZ;
     } else {
-        console.log('[Ellipse] No JSON config found, calculating dynamically.');
         const pickingAndDiverters = stations.filter(s => ['picking', 'diverter'].includes(s._decoded?.type));
         const aisleEntrances = stations.filter(s => s._decoded?.type === 'aisle_entrance');
 
@@ -292,8 +359,6 @@ function createSimpleEllipseBar(parent, stations, uiConfig) {
         radiusX = (maxX - minX) / 2 + marginX;
         radiusZ = 0.55;
     }
-
-    console.log(`[Ellipse] Final - Center: (${centerX.toFixed(2)}, ${centerZ.toFixed(2)}), Radii: (${radiusX.toFixed(2)}, ${radiusZ.toFixed(2)})`);
 
     // Geometry and Material - Made to look like a conveyor cylinder
     const segments = 96;
@@ -322,13 +387,10 @@ function createSimpleEllipseBar(parent, stations, uiConfig) {
 
 // Position stations that reference 11401 on the main loop ellipse
 function createMainLoopConnections(parent, stations, uiConfig) {
-    console.log('[MainLoop] createMainLoopConnections called with uiConfig:', uiConfig);
-    
     // Get ellipse position and dimensions
     const visualEllipseConfig = uiConfig.prezone_visuals?.ellipse;
     if (!visualEllipseConfig || !visualEllipseConfig.position || !visualEllipseConfig.dimensions) {
         console.warn('[MainLoop] No ellipse config found, skipping connections');
-        console.warn('[MainLoop] prezone_visuals:', uiConfig.prezone_visuals);
         return;
     }
 
@@ -340,9 +402,7 @@ function createMainLoopConnections(parent, stations, uiConfig) {
         return (station.directions.straight === 11401) || (station.directions.divert === 11401);
     });
 
-    console.log(`[MainLoop] Found ${connectingStations.length} stations to position on main loop`);
-
-    // Reposition stations on the ellipse perimeter
+    // Reposition stations on the ellipse perimeter (positioning only, no conveyor creation)
     connectingStations.forEach((station, index) => {
         // Store original position
         const originalX = station.position.x;
@@ -360,7 +420,6 @@ function createMainLoopConnections(parent, stations, uiConfig) {
         if (targetMesh) {
             // Reposition the actual mesh to the closest point on ellipse
             targetMesh.position.set(closestPoint.x, ellipsePos.y + 0.1, closestPoint.z);
-            console.log(`[MainLoop] Repositioned mesh for ${station.name} (${station.plc_address}) from (${originalX.toFixed(2)}, ${originalZ.toFixed(2)}) to closest ellipse point (${closestPoint.x.toFixed(2)}, ${closestPoint.z.toFixed(2)})`);
         } else {
             console.warn(`[MainLoop] Could not find mesh for station ${station.name} (${station.plc_address})`);
         }
@@ -370,8 +429,8 @@ function createMainLoopConnections(parent, stations, uiConfig) {
         station.position.y = ellipsePos.y + 0.1;
         station.position.z = closestPoint.z;
     });
-
-    console.log(`[MainLoop] Successfully repositioned ${connectingStations.length} stations on main loop ellipse`);
+    
+    // Note: Conveyor connections are handled by createStationConnections()
 }
 
 // Helper function to find the closest point on an ellipse to a given point
@@ -484,4 +543,9 @@ function createConnectionCylinder(parent, startPoint, endPoint, name) {
     };
     
     parent.add(cylinder);
+}
+
+// Export function to update PLC stations from external modules
+export function updatePLCStationsForPickingCount(uiConfig) {
+    updatePLCStationsForPickingStations(uiConfig);
 }

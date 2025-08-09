@@ -72,6 +72,10 @@ export class InteractionManager {
         updatePanelText(panel);
         this.bindCameraEvents();
         this.bindInputPanelEvents(panel);
+        
+        // Initialize PLC stations based on current aisle count
+        this.updatePLCStationsForAisles();
+        
         // Fix: Add toggle logic for the panel after creation
         const toggleBtn = panel.querySelector('#interaction-toggle');
         if (toggleBtn) {
@@ -109,10 +113,10 @@ export class InteractionManager {
         // Reset to Default button
         const resetDefaultBtn = panel.querySelector('#reset-default-btn');
         resetDefaultBtn.addEventListener('click', () => {
-            // Default config with PLC stations and prezone visuals
+            // Default config with PLC stations and prezone visuals - matches warehouse_config_instance.json
             const defaultConfig = {
                 aisles: 3,
-                levels_per_aisle: [9, 9, 9],
+                levels_per_aisle: [9, 5, 3],
                 modules_per_aisle: 6,
                 locations_per_module: 4,
                 storage_depth: 2,
@@ -228,6 +232,7 @@ export class InteractionManager {
                 location_types: []
             };
             this.uiManager.uiConfig = JSON.parse(JSON.stringify(defaultConfig));
+            this.updatePLCStationsForAisles(); // Initialize PLC stations for default aisles
             this.updateInputPanelFromConfig(panel);
             this.uiManager.updateStorageCapacity();
             this.showLoadingOverlay();
@@ -247,6 +252,7 @@ export class InteractionManager {
                 this.uiManager.updateStorageCapacity();
                 if (id === 'aisles') {
                     this.updateLevelInputs(panel);
+                    this.updatePLCStationsForAisles(); // Update PLC stations and ellipse
                 }
             });
         };
@@ -394,6 +400,127 @@ export class InteractionManager {
         }
         
         // Remove verbose logging from level inputs
+    }
+
+    /**
+     * Updates PLC stations and ellipse dimensions based on the number of aisles
+     */
+    updatePLCStationsForAisles() {
+        const aisleCount = this.uiManager.uiConfig.aisles;
+        
+        // Base PLC stations (always present)
+        const basePlcStations = [
+            {
+                "name": "Entry",
+                "position": { "x": -15.0, "y": 0.0, "z": -2.0 },
+                "plc_address": 11400,
+                "directions": { "straight": 11401, "divert": null }
+            },
+            {
+                "name": "Picking Diverter 1",
+                "position": { "x": -15.0, "y": 0.0, "z": -8.0 },
+                "plc_address": 11700,
+                "directions": { "straight": null, "divert": 11401 }
+            },
+            {
+                "name": "Picking Station 1",
+                "position": { "x": -15.0, "y": 0.0, "z": -14.0 },
+                "plc_address": 11800,
+                "directions": { "straight": 11700, "divert": null }
+            },
+            {
+                "name": "Picking Diverter 2",
+                "position": { "x": -8.0, "y": 0.0, "z": -8.0 },
+                "plc_address": 11701,
+                "directions": { "straight": 11401, "divert": null }
+            },
+            {
+                "name": "Picking Station 2",
+                "position": { "x": -8.0, "y": 0.0, "z": -14.0 },
+                "plc_address": 11801,
+                "directions": { "straight": 11701, "divert": null }
+            },
+            {
+                "name": "Picking Diverter 3",
+                "position": { "x": -1.0, "y": 0.0, "z": -8.0 },
+                "plc_address": 11702,
+                "directions": { "straight": 11401, "divert": null }
+            },
+            {
+                "name": "Picking Station 3",
+                "position": { "x": -1.0, "y": 0.0, "z": -14.0 },
+                "plc_address": 11802,
+                "directions": { "straight": 11702, "divert": null }
+            }
+        ];
+
+        // Generate dynamic aisle stations based on aisle count
+        const dynamicStations = [];
+        
+        // Calculate aisle positions (from existing config examples)
+        const aislePositions = [
+            { x: 3.225, name: "Aisle 1" },   // 11500, 11600, 11900
+            { x: 8.95, name: "Aisle 2" },    // 11501, 11601, 11901  
+            { x: 14.65, name: "Aisle 3" },   // 11502, 11602, 11902
+            { x: 20.375, name: "Aisle 4" },  // 11503, 11603, 11903
+            { x: 26.1, name: "Aisle 5" }     // 11504, 11604, 11904
+        ];
+
+        for (let i = 0; i < aisleCount; i++) {
+            const aisleNum = i + 1;
+            const pos = aislePositions[i] || { x: 3.225 + (i * 5.725), name: `Aisle ${aisleNum}` };
+            
+            // Aisle Entrance (11500 + i)
+            dynamicStations.push({
+                "name": `${pos.name} Entrance`,
+                "position": { "x": pos.x, "y": 0.0, "z": -2.0 },
+                "plc_address": 11500 + i,
+                "directions": { 
+                    "straight": i === 0 ? 11401 : (11600 + i), // First aisle connects to main loop
+                    "divert": i === 0 ? (11600 + i) : 11401    // Others divert to main loop
+                }
+            });
+
+            // Aisle Lift (11600 + i)
+            dynamicStations.push({
+                "name": `${pos.name} Lift`,
+                "position": { "x": pos.x, "y": 1.0, "z": 4.5 },
+                "plc_address": 11600 + i,
+                "directions": { "straight": null, "divert": null }
+            });
+
+            // Fill Reader (11900 + i)
+            dynamicStations.push({
+                "name": `${pos.name} Fill Reader`,
+                "position": { "x": pos.x, "y": 1.0, "z": 6 },
+                "plc_address": 11900 + i,
+                "directions": { "straight": null, "divert": null }
+            });
+        }
+
+        // Update the configuration with combined stations
+        this.uiManager.uiConfig.plc_stations = [...basePlcStations, ...dynamicStations];
+
+        // Update ellipse radiusX based on aisle count (make it wider for more aisles)
+        const baseRadiusX = 15.0;  // Base radius for 3 aisles
+        const additionalRadius = 3.0; // Add 3.0 for each additional aisle
+        const newRadiusX = baseRadiusX + ((aisleCount - 3) * additionalRadius);
+        
+        if (!this.uiManager.uiConfig.prezone_visuals) {
+            this.uiManager.uiConfig.prezone_visuals = {};
+        }
+        if (!this.uiManager.uiConfig.prezone_visuals.ellipse) {
+            this.uiManager.uiConfig.prezone_visuals.ellipse = {
+                "position": { "x": 0, "y": 0.0, "z": -5.0 },
+                "dimensions": { "radiusX": 20.0, "radiusZ": 2.0 }
+            };
+        }
+        
+        this.uiManager.uiConfig.prezone_visuals.ellipse.dimensions.radiusX = Math.max(newRadiusX, 15.0);
+        
+        console.log(`[PLC Update] Updated for ${aisleCount} aisles:`);
+        console.log(`- Total PLC stations: ${this.uiManager.uiConfig.plc_stations.length}`);
+        console.log(`- Ellipse radiusX: ${this.uiManager.uiConfig.prezone_visuals.ellipse.dimensions.radiusX}`);
     }
 
     /**
@@ -634,7 +761,21 @@ export class InteractionManager {
             if (logPanel) logPanel.innerHTML = '';
 
             let label = 'Object selected';
-            if (object.userData && Object.keys(object.userData).length > 0) {
+
+            // Enhanced PLC station check (checks self and parent first)
+            const plcObject = (object.userData && (object.userData.plcAddress || object.userData.plc_address)) 
+                ? object 
+                : (object.parent && object.parent.userData && (object.parent.userData.plcAddress || object.parent.userData.plc_address)) 
+                ? object.parent 
+                : null;
+
+            if (plcObject) {
+                // PLC station display: use original JSON name and only show PLC Address
+                const plcAddress = plcObject.userData.plc_address || plcObject.userData.plcAddress;
+                const stationName = (plcObject.userData.stationData && plcObject.userData.stationData.name) || plcObject.userData.name || plcObject.name || 'PLC Station';
+                const details = `<div style='margin-left:10px;'><strong>PLC Address:</strong> ${plcAddress}</div>`;
+                label = `Selected: <strong>${stationName}</strong>${details}`;
+            } else if (object.userData && Object.keys(object.userData).length > 0) {
                 const incrementKeys = ['aisle', 'level', 'module', 'depth', 'position'];
                 
                 // Handle instanced mesh instances
@@ -661,21 +802,6 @@ export class InteractionManager {
                     if (details) {
                         label += '<br>' + details;
                     }
-                }
-                // Special case: Missing Location
-                else if (
-                    (object.userData.location_type === 'Missing' || object.userData.type === 'Missing') &&
-                    object.userData.status === 'Unavailable'
-                ) {
-                    // Only show incremented aisle, level, module, depth, position
-                    const details = incrementKeys
-                        .filter(k => typeof object.userData[k] === 'number')
-                        .map(k => {
-                            const val = object.userData[k];
-                            return `<div style='margin-left:10px;'><strong>${k}:</strong> ${val === -1 ? '-' : val + 1}</div>`;
-                        })
-                        .join('');
-                    label = `Selected: <strong>Missing</strong>${details}`;
                 } else if (
                     object.userData.type === 'Buffer' || object.userData.location_type === 'Buffer'
                 ) {
