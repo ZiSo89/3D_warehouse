@@ -402,9 +402,6 @@ export class PLCStationManager {
         canvas.width = 320;
         canvas.height = 96;
 
-        // Get SRC analysis
-        const analysis = this.analyzeStationAddress(stationData.plc_address);
-
         context.fillStyle = '#2D3748';
         context.fillRect(0, 0, canvas.width, canvas.height);
         context.fillStyle = '#FFFFFF';

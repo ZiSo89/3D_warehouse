@@ -9,10 +9,6 @@ import { AdvancedLODManager } from './AdvancedLODManager.js';
 import { AnimationManager } from '../animation/AnimationManager.js';
 import { constants } from './constants.js';
 import { setupLighting, createGroundPlane } from './sceneLighting.js';
-// Unused utility imports commented out to reduce lint noise; re-enable when needed.
-// import { exportWarehouseConfiguration, importWarehouseConfiguration, validateWarehouseConfiguration } from './warehouseConfigIO.js';
-// import { updateMissingLocations, addMissingLocation, clearMissingLocations, getLocationType, addBufferLocation, clearBufferLocations } from './locationUtils.js';
-// import { calculateTotalLocations } from './warehouseMetrics.js';
 import { getCameraViewConfig } from '../ui/uiUtils.js';
 
 /**

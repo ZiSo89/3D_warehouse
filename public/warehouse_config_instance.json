@@ -314,9 +314,9 @@
     {
       "aisle": null,
       "level": null,
-      "module": 4,
+      "module": 6,
       "depth": null,
-      "position": [1, 2],
+      "position": [1, 2,3,4],
       "type": "Service"
     }
   ]

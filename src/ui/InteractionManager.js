@@ -250,11 +250,12 @@ export class InteractionManager {
                 const value = parseInt(e.target.value);
                 this.uiManager.uiConfig[configKey] = value;
                 span.textContent = value;
-                this.uiManager.updateStorageCapacity();
                 if (id === 'aisles') {
                     this.updateLevelInputs(panel);
                     this.updatePLCStationsForAisles(); // Update PLC stations and ellipse
                 }
+                // Update storage capacity after all changes are processed
+                this.uiManager.updateStorageCapacity();
             });
         };
         updateValue('aisles', 'aisles');
@@ -400,7 +401,8 @@ export class InteractionManager {
             });
         }
         
-        // Remove verbose logging from level inputs
+        // Update storage capacity after level inputs are synced
+        this.uiManager.updateStorageCapacity();
     }
 
     /**
@@ -803,7 +805,8 @@ export class InteractionManager {
                         details += `<div style='margin-left:10px;'><strong>level:</strong> ${val === -1 ? '-' : val + 1}</div>`;
                     }
                     if (object.userData.flow_type) {
-                        details += `<div style='margin-left:10px;'><strong>type:</strong> ${object.userData.flow_type}</div>`;
+                        // Removed type display for conveyors
+                        // details += `<div style='margin-left:10px;'><strong>type:</strong> ${object.userData.flow_type}</div>`;
                     }
                     label = `Selected: conveyor${details}`;
                 } else if (object.userData.type === 'shuttle') {
@@ -833,7 +836,12 @@ export class InteractionManager {
                     label = `Selected: <strong>${object.userData.name || object.name || 'free storage'}</strong>${details}`;
                 }
             } else if (object.name) {
-                label = `Selected: <strong>${object.name}</strong>`;
+                // Special handling for ellipse
+                if (object.name === 'VisualEllipseBar') {
+                    label = `Selected: <strong>Main Loop</strong>`;
+                } else {
+                    label = `Selected: <strong>${object.name}</strong>`;
+                }
             }
             this.uiManager.addLog(label);
         }

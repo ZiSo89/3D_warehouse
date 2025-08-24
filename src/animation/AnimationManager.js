@@ -1,6 +1,7 @@
 
-/* eslint-disable import/order, no-unused-vars */
+/* eslint-disable no-unused-vars */
 import * as THREE from 'three';
+
 import { UI_THEME } from '../ui/theme.js';
 
 /**

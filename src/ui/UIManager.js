@@ -1,7 +1,4 @@
-// import * as THREE from 'three'; // removed unused
-
 import { UI_THEME } from './theme.js';
-// import { RackBuilderStatsPanel } from './RackBuilderStatsPanel.js'; // removed - stats panel disabled
 
 /**
  * Manages the user interface for warehouse configuration and controls.
@@ -91,10 +88,6 @@ export class UIManager {
             document.body.appendChild(infoDiv);
         }
 
-        // RackBuilder stats panel disabled - removed from UI for cleaner look
-        // try {
-        //     this._rbStatsPanel = new RackBuilderStatsPanel({});
-        // } catch { /* ignore if DOM unavailable */ }
     }
 
     /**
