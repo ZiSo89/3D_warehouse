@@ -1,0 +1,284 @@
+{
+  "metadata": {
+    "name": "warehouse_config",
+    "created": "2025-08-07T01:45:18.718Z",
+    "version": "2.0.0",
+    "description": "Enhanced warehouse configuration with PLC prezone"
+  },
+  "warehouse_parameters": {
+    "aisles": 3,
+    "levels_per_aisle": [
+      9,
+      5,
+      3
+    ],
+    "modules_per_aisle": 6,
+    "locations_per_module": 4,
+    "storage_depth": 2,
+    "picking_stations": 3
+  },
+  "prezone_visuals": {
+    "ellipse": {
+      "position": {
+        "x": 0,
+        "y": 0.0,
+        "z": -5.0
+      },
+      "dimensions": {
+        "radiusX": 20.0,
+        "radiusZ": 2.0
+      }
+    }
+  },
+  "plc_stations": [
+    {
+      "name": "Entry",
+      "position": {
+        "x": -15.0,
+        "y": 0.0,
+        "z": -2.0
+      },
+      "plc_address": 11400,
+      "directions": {
+        "straight": 11401,
+        "divert": null
+      }
+    },
+    {
+      "name": "Aisle 1 Entrance",
+      "position": {
+        "x": 3.225,
+        "y": 0.0,
+        "z": -2.0
+      },
+      "plc_address": 11500,
+      "directions": {
+        "straight": 11600,
+        "divert": 11401
+      }
+    },
+    {
+      "name": "Aisle 1 Lift",
+      "position": {
+        "x": 3.225,
+        "y": 1.0,
+        "z": 4.5
+      },
+      "plc_address": 11600,
+      "directions": {
+        "straight": null,
+        "divert": null
+      }
+    },
+    {
+      "name": "Picking Diverter 1",
+      "position": {
+        "x": -15.0,
+        "y": 0.0,
+        "z": -8.0
+      },
+      "plc_address": 11700,
+      "directions": {
+        "straight": null,
+        "divert": 11401
+      }
+    },
+    {
+      "name": "Picking Station 1",
+      "position": {
+        "x": -15.0,
+        "y": 0.0,
+        "z": -14.0
+      },
+      "plc_address": 11800,
+      "directions": {
+        "straight": 11700,
+        "divert": null
+      }
+    },
+    {
+      "name": "Picking Diverter 2",
+      "position": {
+        "x": -8.0,
+        "y": 0.0,
+        "z": -8.0
+      },
+      "plc_address": 11701,
+      "directions": {
+        "straight": 11401,
+        "divert": null
+      }
+    },
+    {
+      "name": "Picking Station 2",
+      "position": {
+        "x": -8.0,
+        "y": 0.0,
+        "z": -14.0
+      },
+      "plc_address": 11801,
+      "directions": {
+        "straight": 11701,
+        "divert": null
+      }
+    },
+    {
+      "name": "Picking Diverter 3",
+      "position": {
+        "x": -1.0,
+        "y": 0.0,
+        "z": -8.0
+      },
+      "plc_address": 11702,
+      "directions": {
+        "straight": 11401,
+        "divert": null
+      }
+    },
+    {
+      "name": "Picking Station 3",
+      "position": {
+        "x": -1.0,
+        "y": 0.0,
+        "z": -14.0
+      },
+      "plc_address": 11802,
+      "directions": {
+        "straight": 11702,
+        "divert": null
+      }
+    },
+    {
+      "name": "Aisle 2 Entrance",
+      "position": {
+        "x": 8.95,
+        "y": 0.0,
+        "z": -2.0
+      },
+      "plc_address": 11501,
+      "directions": {
+        "straight": 11601,
+        "divert": 11401
+      }
+    },
+    {
+      "name": "Aisle 2 Lift",
+      "position": {
+        "x": 8.95,
+        "y": 1.0,
+        "z": 4.5
+      },
+      "plc_address": 11601,
+      "directions": {
+        "straight": null,
+        "divert": null
+      }
+    },
+    {
+      "name": "Aisle 3 Entrance",
+      "position": {
+        "x": 14.65,
+        "y": 0.0,
+        "z": -2.0
+      },
+      "plc_address": 11502,
+      "directions": {
+        "straight": 11602,
+        "divert": 11401
+      }
+    },
+    {
+      "name": "Aisle 3 Lift",
+      "position": {
+        "x": 14.65,
+        "y": 1.0,
+        "z": 4.5
+      },
+      "plc_address": 11602,
+      "directions": {
+        "straight": null,
+        "divert": null
+      }
+    },
+    {
+      "name": "Aisle 1 Fill Reader",
+      "position": {
+        "x": 3.225,
+        "y": 1.0,
+        "z": 6
+      },
+      "plc_address": 11900,
+      "directions": {
+        "straight": null,
+        "divert": null
+      }
+    },
+    {
+      "name": "Aisle 2 Fill Reader",
+      "position": {
+        "x": 8.95,
+        "y": 1.0,
+        "z": 6
+      },
+      "plc_address": 11901,
+      "directions": {
+        "straight": null,
+        "divert": null
+      }
+    },
+    {
+      "name": "Aisle 3 Fill Reader",
+      "position": {
+        "x": 14.65,
+        "y": 1.0,
+        "z": 6
+      },
+      "plc_address": 11902,
+      "directions": {
+        "straight": null,
+        "divert": null
+      }
+    }
+  ],
+  "missing_locations": [
+    {
+      "aisle": 2,
+      "level": null,
+      "module": 3,
+      "depth": null,
+      "position": null
+    },
+    {
+      "aisle": 1,
+      "level": 4,
+      "module": 3,
+      "depth": 2,
+      "position": 2
+    },
+    {
+      "aisle": 2,
+      "level": 2,
+      "module": 1,
+      "depth": 1,
+      "position": 3
+    }
+  ],
+  "location_types": [
+    {
+      "aisle": null,
+      "level": null,
+      "module": 1,
+      "depth": null,
+      "position": null,
+      "type": "Buffer"
+    },
+    {
+      "aisle": null,
+      "level": null,
+      "module": 4,
+      "depth": null,
+      "position": [1, 2],
+      "type": "Service"
+    }
+  ]
+}
