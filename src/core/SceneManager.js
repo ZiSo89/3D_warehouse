@@ -68,7 +68,7 @@ export class SceneManager {
      */
     async loadDefaultConfiguration() {
         try {
-            const response = await fetch('./warehouse_config_instance.json');
+            const response = await fetch('/warehouse_config_instance.json');
             if (response.ok) {
                 const config = await response.json();
                 
@@ -79,15 +79,42 @@ export class SceneManager {
                 this.missingLocations = this.convertToZeroBased(config.missing_locations || []);
                 this.locationTypes = this.convertToZeroBased(config.location_types || []);
                 
+                console.log('✅ Configuration loaded successfully from warehouse_config_instance.json');
                 return config;
             } else {
-                console.warn('Could not load default configuration from warehouse_config_instance.json');
-                return null;
+                console.warn('❌ Could not load default configuration from warehouse_config_instance.json, HTTP status:', response.status);
+                return this.getFallbackConfiguration();
             }
         } catch (error) {
-            console.warn('Error loading default configuration:', error);
-            return null;
+            console.warn('❌ Error loading default configuration:', error);
+            return this.getFallbackConfiguration();
         }
+    }
+
+    /**
+     * Returns a fallback configuration when the JSON file cannot be loaded.
+     * @returns {Object} Basic warehouse configuration
+     */
+    getFallbackConfiguration() {
+        console.log('🔄 Using fallback configuration');
+        return {
+            metadata: {
+                name: "fallback_config",
+                version: "1.0.0",
+                description: "Fallback warehouse configuration"
+            },
+            warehouse_parameters: {
+                aisles: 3,
+                levels_per_aisle: [9, 5, 3],
+                modules_per_aisle: 6,
+                locations_per_module: 4,
+                storage_depth: 2,
+                picking_stations: 3
+            },
+            missing_locations: [],
+            location_types: [],
+            plc_stations: []
+        };
     }
 
     /**
