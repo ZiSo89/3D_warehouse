@@ -411,14 +411,12 @@ export class PLCStationManager {
         context.font = 'bold 14px Arial';
         context.textAlign = 'center';
         
-        // Station name and description
-        context.fillText(stationData.name, canvas.width / 2, 20);
-        context.fillText(analysis.visualConfig.description, canvas.width / 2, 40);
+        // Station name only
+        context.fillText(stationData.name, canvas.width / 2, 30);
         
-        // PLC address and SRC breakdown
+        // PLC address only (removed SRC breakdown)
         context.font = '12px Arial';
-        context.fillText(`PLC: ${stationData.plc_address}`, canvas.width / 2, 60);
-        context.fillText(`F${analysis.floor}L${analysis.conveyorLevel}T${analysis.stationTypeDigit}C${String(analysis.counter).padStart(2, '0')}`, canvas.width / 2, 80);
+        context.fillText(`PLC: ${stationData.plc_address}`, canvas.width / 2, 50);
 
         const texture = new THREE.CanvasTexture(canvas);
         const spriteMaterial = new THREE.SpriteMaterial({ map: texture });

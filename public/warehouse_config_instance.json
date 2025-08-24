@@ -45,9 +45,9 @@
       }
     },
     {
-      "name": "Aisle 1 Entrance",
+      "name": "Aisle 1 Fill Reader",
       "position": {
-        "x": 3.225,
+        "x": 2.5,
         "y": 0.0,
         "z": -2.0
       },
@@ -58,11 +58,11 @@
       }
     },
     {
-      "name": "Aisle 1 Lift",
+      "name": "Aisle 1 Lift Entrance",
       "position": {
         "x": 3.225,
         "y": 1.0,
-        "z": 4.5
+        "z": 6
       },
       "plc_address": 11600,
       "directions": {
@@ -149,9 +149,9 @@
       }
     },
     {
-      "name": "Aisle 2 Entrance",
+      "name": "Aisle 2 Fill Reader",
       "position": {
-        "x": 8.95,
+        "x": 8.2,
         "y": 0.0,
         "z": -2.0
       },
@@ -162,11 +162,11 @@
       }
     },
     {
-      "name": "Aisle 2 Lift",
+      "name": "Aisle 2 Lift Entrance",
       "position": {
         "x": 8.95,
         "y": 1.0,
-        "z": 4.5
+        "z": 6
       },
       "plc_address": 11601,
       "directions": {
@@ -175,9 +175,9 @@
       }
     },
     {
-      "name": "Aisle 3 Entrance",
+      "name": "Aisle 3 Fill Reader",
       "position": {
-        "x": 14.65,
+        "x": 13.9,
         "y": 0.0,
         "z": -2.0
       },
@@ -188,11 +188,11 @@
       }
     },
     {
-      "name": "Aisle 3 Lift",
+      "name": "Aisle 3 Lift Entrance",
       "position": {
         "x": 14.65,
         "y": 1.0,
-        "z": 4.5
+        "z": 6
       },
       "plc_address": 11602,
       "directions": {
@@ -201,11 +201,11 @@
       }
     },
     {
-      "name": "Aisle 1 Fill Reader",
+      "name": "Aisle 1 Reading Scanner",
       "position": {
         "x": 3.225,
         "y": 1.0,
-        "z": 6
+        "z": 4.5
       },
       "plc_address": 11900,
       "directions": {
@@ -214,11 +214,11 @@
       }
     },
     {
-      "name": "Aisle 2 Fill Reader",
+      "name": "Aisle 2 Reading Scanner",
       "position": {
         "x": 8.95,
         "y": 1.0,
-        "z": 6
+        "z": 4.5
       },
       "plc_address": 11901,
       "directions": {
@@ -227,13 +227,52 @@
       }
     },
     {
-      "name": "Aisle 3 Fill Reader",
+      "name": "Aisle 3 Reading Scanner",
       "position": {
         "x": 14.65,
         "y": 1.0,
-        "z": 6
+        "z": 4.5
       },
       "plc_address": 11902,
+      "directions": {
+        "straight": null,
+        "divert": null
+      }
+    },
+    {
+      "name": "Aisle 1 Lift Exit",
+      "position": {
+        "x": 2.5,
+        "y": 1.0,
+        "z": 6
+      },
+      "plc_address": 21600,
+      "directions": {
+        "straight": null,
+        "divert": null
+      }
+    },
+    {
+      "name": "Aisle 2 Lift Exit",
+      "position": {
+        "x": 8.2,
+        "y": 1.0,
+        "z": 6
+      },
+      "plc_address": 21601,
+      "directions": {
+        "straight": null,
+        "divert": null
+      }
+    },
+    {
+      "name": "Aisle 3 Lift Exit",
+      "position": {
+        "x": 13.9,
+        "y": 1.0,
+        "z": 6
+      },
+      "plc_address": 21602,
       "directions": {
         "straight": null,
         "divert": null
