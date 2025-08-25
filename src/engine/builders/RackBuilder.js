@@ -168,20 +168,16 @@ export class RackBuilder {
       for (let s=0; s<uiConfig.locations_per_module; s++) {
         if (this.matchMissing(a,l,m,d,s,missingLocations)) continue;
         const locType = this.matchLocationType(a,l,m,d,s,locationTypes) || 'Storage';
-        const { color, emissive, emissiveIntensity } = getLocationTypeColor(locType, d);
+        const dIndex = isEast ? d : (uiConfig.storage_depth - 1 - d);
+        const { color, emissive, emissiveIntensity } = getLocationTypeColor(locType, dIndex);
         const geom = new THREE.BoxGeometry(
           constants.locationDepth * 0.8,
           constants.levelHeight * 0.8,
           constants.locationLength * 0.8
         );
-  // Slight variation: service/buffer more matte, storage medium, others shinier
-  let metalness = 0.5; let roughness = 0.55;
-  if (locType === 'Buffer') { metalness = 0.35; roughness = 0.65; }
-  else if (locType === 'Service') { metalness = 0.3; roughness = 0.6; }
-  else if (locType === 'Pick') { metalness = 0.55; roughness = 0.5; }
-  const mat = new THREE.MeshStandardMaterial({ color, emissive, emissiveIntensity, metalness, roughness });
+  // Use MeshBasicMaterial for consistent colors regardless of lighting
+  const mat = new THREE.MeshBasicMaterial({ color });
         const mesh = new THREE.Mesh(geom, mat);
-        const dIndex = isEast ? d : (uiConfig.storage_depth - 1 - d);
         mesh.position.set(
           (dIndex*constants.locationDepth)+(constants.locationDepth/2),
           (l*constants.levelHeight)+(constants.levelHeight/2),
@@ -236,9 +232,6 @@ export class RackBuilder {
       });
     }
     const group = new THREE.Group();
-  group.add(new THREE.AmbientLight(0xffffff, 0.32));
-  group.add(new THREE.HemisphereLight(0xe0f4ff, 0x3a3a3a, 0.55));
-  const d = new THREE.DirectionalLight(0xffffff,0.75); d.position.set(14,22,12); group.add(d);
 
     const locationGeometry = new THREE.BoxGeometry(
       constants.locationDepth * 0.8,
@@ -280,10 +273,20 @@ export class RackBuilder {
                 }
                 const locType = this.matchLocationType(a,l,m,dpt,s,locationTypes) || 'Storage';
                 const displayDepthIndex = isEast ? dpt : uiConfig.storage_depth - 1 - dpt;
+                
+                // For Storage, include depth parity for correct alternating colors
+                let bucketKey;
+                if (locType === 'Storage') {
+                  const depthParity = displayDepthIndex % 2 === 0 ? 'even' : 'odd';
+                  bucketKey = `${locType}_${side}_${depthParity}`;
+                } else {
+                  bucketKey = `${locType}_${side}`;
+                }
+                
                 const x = xBase + (displayDepthIndex * constants.locationDepth) + (constants.locationDepth/2);
                 const y = (l*constants.levelHeight)+(constants.levelHeight/2);
                 const z = (m*uiConfig.locations_per_module*constants.locationLength) + (s*constants.locationLength)+(constants.locationLength/2);
-                pushInstance(`${locType}_${side}`, new THREE.Vector3(x,y,z), { aisle:a, level:l, module:m, depth:dpt, position:s, type:locType });
+                pushInstance(bucketKey, new THREE.Vector3(x,y,z), { aisle:a, level:l, module:m, depth:dpt, position:s, type:locType });
               }
             }
           }
@@ -301,7 +304,7 @@ export class RackBuilder {
         frameCount += levels * uiConfig.modules_per_aisle * 2; // two sides
       }
       if (frameCount === 0) return;
-      const frameMaterial = this.textureAtlas ? (this.textureAtlas.getMaterial('frame_steel') || this.textureAtlas.getMaterial('frame_aluminum')) : new THREE.MeshStandardMaterial({ color: 0x888888, metalness:0.6, roughness:0.4 });
+      const frameMaterial = this.textureAtlas ? (this.textureAtlas.getMaterial('frame_steel') || this.textureAtlas.getMaterial('frame_aluminum')) : new THREE.MeshBasicMaterial({ color: 0x888888 });
       const frameMesh = new THREE.InstancedMesh(frameGeometry, frameMaterial, frameCount);
       const mtx = new THREE.Matrix4();
       let idx = 0;
@@ -394,8 +397,16 @@ export class RackBuilder {
         const missingMat = this.textureAtlas.getMaterial('missing_location');
         if (missingMat) return missingMat.clone();
         // fallback translucent red
-        return new THREE.MeshStandardMaterial({ color: 0xff4444, transparent:true, opacity:0.25 });
+        return new THREE.MeshBasicMaterial({ color: 0xff4444, transparent:true, opacity:0.25 });
       }
+      
+      // Handle Storage with depth parity for alternating colors
+      if (type.startsWith('Storage_')) {
+        const isEven = type.includes('_even');
+        const { color } = getLocationTypeColor('Storage', isEven ? 0 : 1);
+        return new THREE.MeshBasicMaterial({ color });
+      }
+      
       const atlasMat = this.textureAtlas.getMaterial(`storage_${safe}`) || this.textureAtlas.getMaterial('storage_default');
       if (atlasMat && atlasMat.userData && atlasMat.userData.atlasName !== 'storage_default') {
         return atlasMat.clone();
@@ -413,7 +424,7 @@ export class RackBuilder {
         return (atlasMat || this.textureAtlas.getMaterial('storage_default')).clone();
       }
     }
-    return new THREE.MeshStandardMaterial({ color: 0x6e9075 });
+    return new THREE.MeshBasicMaterial({ color: 0x6e9075 });
   }
 
   /**

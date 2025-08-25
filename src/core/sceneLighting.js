@@ -5,15 +5,9 @@ import * as THREE from 'three';
  * @param {THREE.Scene} scene - The Three.js scene to add lights to.
  */
 export function setupLighting(scene) {
-    // Ambient light for general illumination
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+    // Simple ambient light since we're using MeshBasicMaterial
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
     scene.add(ambientLight);
-
-    // Directional light for main illumination (no shadows for performance)
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    mainLight.position.set(30, 40, 30);
-    mainLight.castShadow = false;
-    scene.add(mainLight);
 }
 
 /**
