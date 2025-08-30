@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Detection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .mobile {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border: 2px solid #1565c0;
+        }
+        .desktop {
+            background-color: #f3e5f5;
+            color: #7b1fa2;
+            border: 2px solid #7b1fa2;
+        }
+        .detail {
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px 10px 0;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Mobile Detection Test</h1>
+    <p>This page will help you verify that mobile detection is working correctly.</p>
+    
+    <div id="detection-result" class="test-result"></div>
+    
+    <h2>📱 Detection Details:</h2>
+    <div class="detail">
+        <strong>User Agent:</strong><br>
+        <span id="user-agent"></span>
+    </div>
+    
+    <div class="detail">
+        <strong>Screen Size:</strong> <span id="screen-size"></span><br>
+        <strong>Window Size:</strong> <span id="window-size"></span><br>
+        <strong>Device Pixel Ratio:</strong> <span id="pixel-ratio"></span>
+    </div>
+    
+    <div class="detail">
+        <strong>Touch Support:</strong> <span id="touch-support"></span><br>
+        <strong>Max Touch Points:</strong> <span id="max-touch-points"></span>
+    </div>
+    
+    <h2>🧪 Test Actions:</h2>
+    <button onclick="window.open('http://localhost:5173/', '_blank')">Open Main App</button>
+    <button onclick="location.reload()">Refresh Test</button>
+    
+    <h2>📋 How to Test:</h2>
+    <ol>
+        <li><strong>Desktop Test:</strong> Should show "DESKTOP DETECTED" in purple</li>
+        <li><strong>Mobile Simulation:</strong> 
+            <ul>
+                <li>Press F12 → Click device icon (📱)</li>
+                <li>Select a mobile device</li>
+                <li>Refresh this page</li>
+                <li>Should show "MOBILE DETECTED" in blue</li>
+            </ul>
+        </li>
+        <li><strong>Real Mobile:</strong> Open this page on your phone using the network URL</li>
+    </ol>
+
+    <script type="module">
+        // Import the mobile detection function
+        import { isMobile } from './src/core/deviceUtils.js';
+        
+        function runTests() {
+            const mobile = isMobile();
+            const resultDiv = document.getElementById('detection-result');
+            
+            if (mobile) {
+                resultDiv.className = 'test-result mobile';
+                resultDiv.innerHTML = '📱 MOBILE DETECTED - Optimizations Active!';
+            } else {
+                resultDiv.className = 'test-result desktop';
+                resultDiv.innerHTML = '🖥️ DESKTOP DETECTED - Full Features Active!';
+            }
+            
+            // Fill in details
+            document.getElementById('user-agent').textContent = navigator.userAgent;
+            document.getElementById('screen-size').textContent = `${screen.width} x ${screen.height}`;
+            document.getElementById('window-size').textContent = `${window.innerWidth} x ${window.innerHeight}`;
+            document.getElementById('pixel-ratio').textContent = window.devicePixelRatio || 'Not available';
+            document.getElementById('touch-support').textContent = 'ontouchstart' in window ? 'Yes' : 'No';
+            document.getElementById('max-touch-points').textContent = navigator.maxTouchPoints || 0;
+        }
+        
+        // Run tests when page loads
+        runTests();
+        
+        // Re-run tests when window is resized (useful for testing responsive behavior)
+        window.addEventListener('resize', runTests);
+    </script>
+</body>
+</html>

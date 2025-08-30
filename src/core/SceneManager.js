@@ -10,6 +10,7 @@ import { AnimationManager } from '../animation/AnimationManager.js';
 import { constants } from './constants.js';
 import { setupLighting, createGroundPlane } from './sceneLighting.js';
 import { getCameraViewConfig } from '../ui/uiUtils.js';
+import { isMobile } from './deviceUtils.js';
 
 /**
  * Main scene manager for the 3D warehouse visualization.
@@ -34,19 +35,42 @@ export class SceneManager {
      */
     constructor() {
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        // Optimize camera settings for mobile devices
+        const mobile = isMobile();
+        const fov = mobile ? 65 : 75; // Slightly smaller FOV on mobile for better performance
+        const far = mobile ? 500 : 1000; // Reduce far plane on mobile to improve culling
+        
+        this.camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, far);
+        
+        // Configure renderer with mobile optimizations
+        const rendererConfig = { 
+            antialias: !mobile, // Disable antialiasing on mobile for better performance
+            powerPreference: mobile ? "low-power" : "high-performance"
+        };
+        
+        this.renderer = new THREE.WebGLRenderer(rendererConfig);
+        
+        // Additional mobile optimizations
+        if (mobile) {
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio on mobile
+            this.renderer.shadowMap.enabled = false; // Disable shadows on mobile
+        } else {
+            this.renderer.setPixelRatio(window.devicePixelRatio);
+        }
+        
         this.controls = null;
         this.warehouseGroup = new THREE.Group();
         this.animationManager = new AnimationManager(this);
         this.scene.add(this.warehouseGroup);
         this.useInstancedRendering = true; // Enable instanced rendering by default
-    this.useNewRackBuilder = true; // feature flag enabled by default now
-    this.rackBuilder = new RackBuilder({ instanced: this.useInstancedRendering });
+        this.useNewRackBuilder = true; // feature flag enabled by default now
+        this.rackBuilder = new RackBuilder({ instanced: this.useInstancedRendering });
         
-        // Initialize Advanced LOD Manager
+        // Initialize Advanced LOD Manager with mobile considerations
         this.lodManager = new AdvancedLODManager();
-        this.useLOD = true; // Enable LOD by default
+        this.useLOD = !mobile; // Disable aggressive LOD on mobile to prevent objects disappearing
+        this.isMobileDevice = mobile;
         
         this.missingLocations = [];
         this.locationTypes = [];
@@ -194,15 +218,22 @@ export class SceneManager {
         }
 
         this.scene.background = new THREE.Color(0xf1faee); // Light cream from palette
-        this.scene.fog = new THREE.Fog(0xf1faee, 50, 100); // Matching fog color
+        
+        // Optimize fog settings for mobile
+        const fogNear = this.isMobileDevice ? 30 : 50;
+        const fogFar = this.isMobileDevice ? 60 : 100;
+        this.scene.fog = new THREE.Fog(0xf1faee, fogNear, fogFar);
 
         setupLighting(this.scene);
         createGroundPlane(this.scene);
 
         window.addEventListener('resize', this.onWindowResize.bind(this), false);
 
-        createOrientationLabels(this.scene); // Large labels at warehouse edges
-        this.compassGroup = createCompass(this.scene); // 3D compass for orientation
+        // Skip compass on mobile for better performance
+        if (!this.isMobileDevice) {
+            createOrientationLabels(this.scene); // Large labels at warehouse edges
+            this.compassGroup = createCompass(this.scene); // 3D compass for orientation
+        }
 
         this.animate();
     }
@@ -211,13 +242,13 @@ export class SceneManager {
 
     animate() {
         requestAnimationFrame(this.animate);
-        this.controls.update();
-
-        // Update TWEEN animations if available
-        if (typeof TWEEN !== 'undefined') {
-            TWEEN.update();
+        // Use Enhanced LOD Manager for performance optimization (disabled on mobile)
+        if (this.useLOD && this.lodManager && !this.isMobileDevice) {
+            this.lodManager.updateLOD(this.camera, this.scene, true);
+        } else {
+            // Fallback to legacy frustum culling (simplified for mobile)
+            this.legacyFrustumCulling();
         }
-
         // Use Enhanced LOD Manager for performance optimization
         if (this.useLOD && this.lodManager) {
             this.lodManager.updateLOD(this.camera, this.scene, true);
@@ -231,6 +262,7 @@ export class SceneManager {
 
     /**
      * Legacy frustum culling for backward compatibility
+     * Optimized for mobile devices to prevent objects from disappearing
      */
     legacyFrustumCulling() {
         if (this.warehouseGroup && this.warehouseGroup.children.length > 0) {
@@ -241,6 +273,9 @@ export class SceneManager {
             cameraViewProjectionMatrix.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
             frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
             
+            // Use more generous distance culling on mobile to prevent objects disappearing
+            const cullDistance = this.isMobileDevice ? 200 : 120;
+            
             this.warehouseGroup.children.forEach(child => {
                 if (child.type === 'Group' && child.children) {
                     child.children.forEach(grandchild => {
@@ -249,8 +284,10 @@ export class SceneManager {
                             grandchild.getWorldPosition(rackPos);
                             const camPos = this.camera.position;
                             const dist = rackPos.distanceTo(camPos);
-                            let visible = dist < 120;
-                            if (grandchild.isMesh && grandchild.geometry && grandchild.geometry.boundingSphere) {
+                            let visible = dist < cullDistance;
+                            
+                            // Skip frustum culling on mobile for main objects to prevent disappearing
+                            if (!this.isMobileDevice && grandchild.isMesh && grandchild.geometry && grandchild.geometry.boundingSphere) {
                                 try {
                                     visible = visible && frustum.intersectsObject(grandchild);
                                 } catch {
@@ -263,7 +300,8 @@ export class SceneManager {
                 }
                 if (child.isMesh && child.geometry && child.geometry.boundingSphere) {
                     try {
-                        child.visible = frustum.intersectsObject(child);
+                        // Skip frustum culling on mobile for main objects
+                        child.visible = this.isMobileDevice ? true : frustum.intersectsObject(child);
                     } catch {
                         child.visible = true; // fallback visible
                     }
@@ -317,14 +355,18 @@ export class SceneManager {
     }
 
     updateTheme(isDark) {
+        // Adjust fog settings - mobile gets more generous fog distance to prevent model disappearing on zoom out
+        const fogNear = this.isMobileDevice ? 50 : 50;
+        const fogFar = this.isMobileDevice ? 300 : 100;
+        
         if (isDark) {
             // Dark theme
             this.scene.background = new THREE.Color(0x111827); // Dark blue-grey
-            this.scene.fog = new THREE.Fog(0x111827, 50, 100);
+            this.scene.fog = new THREE.Fog(0x111827, fogNear, fogFar);
         } else {
             // Light theme  
             this.scene.background = new THREE.Color(0xf1faee); // Light cream
-            this.scene.fog = new THREE.Fog(0xf1faee, 50, 100);
+            this.scene.fog = new THREE.Fog(0xf1faee, fogNear, fogFar);
         }
     }
 
