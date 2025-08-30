@@ -221,7 +221,7 @@ export class SceneManager {
         
         // Optimize fog settings for mobile
         const fogNear = this.isMobileDevice ? 30 : 50;
-        const fogFar = this.isMobileDevice ? 60 : 100;
+        const fogFar = this.isMobileDevice ? 150 : 100;
         this.scene.fog = new THREE.Fog(0xf1faee, fogNear, fogFar);
 
         setupLighting(this.scene);
