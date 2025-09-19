@@ -18,6 +18,7 @@
     "picking_stations": 3
   },
   "prezone_visuals": {
+  "realisticConveyors": true,
     "ellipse": {
       "position": {
         "x": 0,

@@ -96,12 +96,14 @@ export function createPrezone(uiConfig, _constants) {
         const plcManager = new PLCStationManager();
         const plcPrezone = plcManager.generatePrezone(filteredStations);
         prezoneGroup.add(plcPrezone);
-        // Create simple ellipse bar (visual only), now reading from uiConfig
-        createSimpleEllipseBar(prezoneGroup, filteredStations, uiConfig);
-        // Create connections to main loop (11401) for positioning stations on ellipse
+    // Create ellipse bar (visual only), supports realistic mode via uiConfig flag
+    createSimpleEllipseBar(prezoneGroup, filteredStations, uiConfig);
+    // Create connections to main loop (11401) for positioning stations on ellipse
         createMainLoopConnections(prezoneGroup, filteredStations, uiConfig);
         // Create station connections for dynamic conveyor system
-        createStationConnections(prezoneGroup, filteredStations);
+    createStationConnections(prezoneGroup, filteredStations, uiConfig);
+    // Connect all Lift Exits (216xx) to the nearest point on the main loop
+    createLiftExitToLoopConnections(prezoneGroup, filteredStations, uiConfig);
     } else {
         createPickingStation(prezoneGroup, uiConfig);
     createMultiLiftConveyorSystem(prezoneGroup, uiConfig, _constants);
@@ -182,14 +184,14 @@ function createMultiLiftConveyorSystem(parent, uiConfig, _constants) {
         { x: liftX, y: targetLevel, z: frontOffset, name: 'Left Alignment' },
         { x: liftX, y: targetLevel, z: 4, name: 'Distribution Hub' }
     ];
-    for (let i = 0; i < mainPath.length - 1; i++) createConveyorSegment(parent, mainPath[i], mainPath[i + 1], `Main_TARGET_${i + 1}`, 'target');
+    for (let i = 0; i < mainPath.length - 1; i++) createConveyorSegment(parent, mainPath[i], mainPath[i + 1], `Main_TARGET_${i + 1}`, 'target', uiConfig);
 
     const mainSourcePath = [
         { x: liftX + horizontalOffset, y: sourceLevel, z: 4, name: 'SOURCE Distribution Hub' },
         { x: liftX + horizontalOffset, y: sourceLevel, z: frontOffset, name: 'SOURCE Left Alignment' },
         { x: mainPickingX + horizontalOffset, y: sourceLevel, z: frontOffset, name: 'SOURCE Forward Step' }
     ];
-    for (let i = 0; i < mainSourcePath.length - 1; i++) createConveyorSegment(parent, mainSourcePath[i], mainSourcePath[i + 1], `Main_SOURCE_${i + 1}`, 'source');
+    for (let i = 0; i < mainSourcePath.length - 1; i++) createConveyorSegment(parent, mainSourcePath[i], mainSourcePath[i + 1], `Main_SOURCE_${i + 1}`, 'source', uiConfig);
 
     for (let s = 0; s < uiConfig.picking_stations; s++) {
         const adjusted = s + 1;
@@ -199,13 +201,13 @@ function createMultiLiftConveyorSystem(parent, uiConfig, _constants) {
                 { x: stationX, y: targetLevel, z: frontOffset, name: `Station ${adjusted} Forward Step` },
                 { x: liftX, y: targetLevel, z: frontOffset, name: `Station ${adjusted} Left Alignment` }
             ];
-            for (let i = 0; i < stationPath.length - 1; i++) createConveyorSegment(parent, stationPath[i], stationPath[i + 1], `Station${adjusted}_TARGET_${i + 1}`, 'target');
+            for (let i = 0; i < stationPath.length - 1; i++) createConveyorSegment(parent, stationPath[i], stationPath[i + 1], `Station${adjusted}_TARGET_${i + 1}`, 'target', uiConfig);
 
             const stationSourcePath = [
                 { x: liftX + horizontalOffset, y: sourceLevel, z: frontOffset, name: `SOURCE Station ${adjusted} Main Forward` },
                 { x: stationX + horizontalOffset, y: sourceLevel, z: frontOffset, name: `SOURCE Station ${adjusted} Forward Step` }
             ];
-            for (let i = 0; i < stationSourcePath.length - 1; i++) createConveyorSegment(parent, stationSourcePath[i], stationSourcePath[i + 1], `Station${adjusted}_SOURCE_${i + 1}`, 'source');
+            for (let i = 0; i < stationSourcePath.length - 1; i++) createConveyorSegment(parent, stationSourcePath[i], stationSourcePath[i + 1], `Station${adjusted}_SOURCE_${i + 1}`, 'source', uiConfig);
         }
     }
 
@@ -213,8 +215,8 @@ function createMultiLiftConveyorSystem(parent, uiConfig, _constants) {
     const distributionStart = liftX;
     const distributionEnd = (uiConfig.aisles - 1) * rackAndAisleWidth + 2;
 
-    createConveyorSegment(parent, { x: distributionStart + horizontalOffset, y: sourceLevel, z: distributionZ, name: 'SOURCE Distribution Start' }, { x: distributionEnd + horizontalOffset + 1.3, y: sourceLevel, z: distributionZ, name: 'SOURCE Distribution End' }, 'Distribution_SOURCE', 'source');
-    createConveyorSegment(parent, { x: distributionStart, y: targetLevel, z: distributionZ, name: 'TARGET Distribution Start' }, { x: distributionEnd + horizontalOffset + 1.3, y: targetLevel, z: distributionZ, name: 'TARGET Distribution End' }, 'Distribution_TARGET', 'target');
+    createConveyorSegment(parent, { x: distributionStart + horizontalOffset, y: sourceLevel, z: distributionZ, name: 'SOURCE Distribution Start' }, { x: distributionEnd + horizontalOffset + 1.3, y: sourceLevel, z: distributionZ, name: 'SOURCE Distribution End' }, 'Distribution_SOURCE', 'source', uiConfig);
+    createConveyorSegment(parent, { x: distributionStart, y: targetLevel, z: distributionZ, name: 'TARGET Distribution Start' }, { x: distributionEnd + horizontalOffset + 1.3, y: targetLevel, z: distributionZ, name: 'TARGET Distribution End' }, 'Distribution_TARGET', 'target', uiConfig);
 
     for (let aisle = 0; aisle < uiConfig.aisles; aisle++) {
         const ax = aisle * rackAndAisleWidth + (uiConfig.storage_depth * 0.8) + 1.25;
@@ -226,14 +228,14 @@ function createMultiLiftConveyorSystem(parent, uiConfig, _constants) {
             { x: ax + horizontalOffset, y: sourceLevel, z: liftApproachZ, name: `SOURCE Lift ${aisle} Approach` },
             { x: ax + horizontalOffset, y: sourceLevel, z: liftFinalZ - 1, name: `SOURCE Lift ${aisle} Final` }
         ];
-        for (let i = 0; i < sourceBranch.length - 1; i++) createConveyorSegment(parent, sourceBranch[i], sourceBranch[i + 1], `Lift${aisle}_SOURCE_${i + 1}`, 'source');
+    for (let i = 0; i < sourceBranch.length - 1; i++) createConveyorSegment(parent, sourceBranch[i], sourceBranch[i + 1], `Lift${aisle}_SOURCE_${i + 1}`, 'source', uiConfig);
 
         const targetBranch = [
             { x: ax, y: targetLevel, z: liftFinalZ - 1, name: `TARGET Lift ${aisle} Final` },
             { x: ax, y: targetLevel, z: liftApproachZ, name: `TARGET Lift ${aisle} Approach` },
             { x: ax, y: targetLevel, z: distributionZ, name: `TARGET Distribution Point ${aisle}` }
         ];
-        for (let i = 0; i < targetBranch.length - 1; i++) createConveyorSegment(parent, targetBranch[i], targetBranch[i + 1], `Lift${aisle}_TARGET_${i + 1}`, 'target');
+    for (let i = 0; i < targetBranch.length - 1; i++) createConveyorSegment(parent, targetBranch[i], targetBranch[i + 1], `Lift${aisle}_TARGET_${i + 1}`, 'target', uiConfig);
 
         createSupportPillars(parent, ax, distributionZ, liftFinalZ, targetLevel, sourceLevel);
     }
@@ -248,76 +250,35 @@ function createSupportPillars(_parent, _liftX, _startZ, _endZ, _lowerLevel, _upp
     // (Implementation placeholder if pillars are later enabled)
 }
 
-// ------------------------------------------------------------
-// Conveyor segment creation
-// ------------------------------------------------------------
-function createConveyorSegment(parent, startPoint, endPoint, _segmentName, flowType = 'general') {
-    const DISABLED = false; // set true to hide conveyors
-    if (DISABLED) {
-        return;
-    }
-
-    const dx = endPoint.x - startPoint.x;
-    const dy = endPoint.y - startPoint.y;
-    const dz = endPoint.z - startPoint.z;
-    const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    if (length === 0) return;
-
-    let color, opacity;
-    switch (flowType) {
-        case 'source': color = 0x1976d2; opacity = 0.92; break;
-        case 'target': color = 0xbc6c25; opacity = 0.92; break;
-        case 'main': color = 0x6e9075; opacity = 0.85; break;
-        case 'loop_connection': color = 0xff4444; opacity = 0.88; break;
-        case 'straight_connection': color = 0x00ff88; opacity = 0.85; break;
-        case 'divert_connection': color = 0xffaa00; opacity = 0.85; break;
-        default: color = 0x3d5a6c; opacity = 0.7; break;
-    }
-
-    const geom = new THREE.CylinderGeometry(0.12, 0.12, length, 14, 1, false);
-    const mat = new THREE.MeshPhysicalMaterial({ color, metalness: 0.7, roughness: 0.35, clearcoat: 0.4, clearcoatRoughness: 0.18, reflectivity: 0.6, transparent: true, opacity });
-    const mesh = new THREE.Mesh(geom, mat);
-
-    // Align cylinder: default up (0,1,0) -> direction
-    const dir = new THREE.Vector3(dx, dy, dz).normalize();
-    const up = new THREE.Vector3(0, 1, 0);
-    const quat = new THREE.Quaternion().setFromUnitVectors(up, dir);
-    mesh.quaternion.copy(quat);
-
-    // Midpoint
-    mesh.position.set(startPoint.x + dx / 2, startPoint.y + dy / 2, startPoint.z + dz / 2);
-    mesh.name = `ConveyorSegment_${_segmentName}`;
-    mesh.userData = { type: 'conveyor_segment', segment_name: _segmentName, flow_type: flowType, from: startPoint.name, to: endPoint.name };
-    parent.add(mesh);
-}
+// (legacy conveyor creation removed; see the realistic/legacy wrapper at the bottom of the file)
 
 // ------------------------------------------------------------
 // Station connections
 // ------------------------------------------------------------
-function createStationConnections(parent, stations) {
+function createStationConnections(parent, stations, uiConfig) {
     stations.forEach(st => {
         if (st.plc_address === 11401 || !st.directions) return;
         
         // Create straight connections (but skip if going to main loop 11401)
         if (st.directions.straight && st.directions.straight !== 11401) {
             const target = stations.find(s => s.plc_address === st.directions.straight);
-            if (target) createStationToStationConnection(parent, st, target, 'straight');
+        if (target) createStationToStationConnection(parent, st, target, 'straight', uiConfig);
         }
         
         // Create divert connections (but skip if going to main loop 11401)
         if (st.directions.divert && st.directions.divert !== 11401) {
             const target = stations.find(s => s.plc_address === st.directions.divert);
-            if (target) createStationToStationConnection(parent, st, target, 'divert');
+        if (target) createStationToStationConnection(parent, st, target, 'divert', uiConfig);
         }
     });
 }
 
-function createStationToStationConnection(parent, fromStation, toStation, connectionType) {
+function createStationToStationConnection(parent, fromStation, toStation, connectionType, uiConfig) {
     const flowType = connectionType === 'divert' ? 'divert_connection' : 'straight_connection';
     createConveyorSegment(parent,
         { x: fromStation.position.x, y: fromStation.position.y || 0.15, z: fromStation.position.z, name: `Station ${fromStation.plc_address}` },
         { x: toStation.position.x, y: toStation.position.y || 0.15, z: toStation.position.z, name: `Station ${toStation.plc_address}` },
-        `${fromStation.plc_address}_${connectionType}_${toStation.plc_address}`, flowType);
+    `${fromStation.plc_address}_${connectionType}_${toStation.plc_address}`, flowType, uiConfig);
 }
 
 // Position ellipse between picking/aisle stations, or use JSON config if available
@@ -361,29 +322,82 @@ function createSimpleEllipseBar(parent, stations, uiConfig) {
         radiusZ = 0.55;
     }
 
-    // Geometry and Material - Made to look like a conveyor cylinder
-    const segments = 96;
-    const baseR = Math.max(radiusX, radiusZ);
-    const tubeRadius = 0.25; // Thicker like a conveyor cylinder
-    const geom = new THREE.TorusGeometry(baseR, tubeRadius, 16, segments);
-    // Correct scaling: Scale Y axis of the geometry, which becomes Z axis after rotation
-    geom.scale(radiusX / baseR, radiusZ / baseR, 1);
+    const realistic = uiConfig?.prezone_visuals?.realisticConveyors === true;
+    if (realistic) {
+        // Build a belt-like elliptical loop using TubeGeometry and add inner/outer rails.
+        const effectiveCenterY = Math.max(0.15, centerY ?? 0.0);
+        const ellipseCurve = new THREE.CatmullRomCurve3(
+            Array.from({ length: 64 }, (_, i) => {
+                const t = (i / 64) * Math.PI * 2;
+                return new THREE.Vector3(
+                    centerX + radiusX * Math.cos(t),
+                    effectiveCenterY,
+                    centerZ + radiusZ * Math.sin(t)
+                );
+            }),
+            true,
+            'centripetal',
+            0.5
+        );
+        const beltRadius = 0.12;
+        const beltGeom = new THREE.TubeGeometry(ellipseCurve, 256, beltRadius, 16, true);
+        const beltMat = new THREE.MeshPhysicalMaterial({ color: 0x333333, metalness: 0.1, roughness: 0.9 });
+        const belt = new THREE.Mesh(beltGeom, beltMat);
+        belt.name = 'VisualEllipseConveyor_Belt';
+        parent.add(belt);
 
-    // Material similar to conveyor cylinders - metallic gray/blue
-    const mat = new THREE.MeshPhysicalMaterial({
-        color: 0x4a90e2, // Blue-gray like conveyor cylinders
-        metalness: 0.8,
-        roughness: 0.2,
-        clearcoat: 0.3,
-        clearcoatRoughness: 0.1,
-        transparent: false,
-        opacity: 1.0
-    });
-    const mesh = new THREE.Mesh(geom, mat);
-    mesh.position.set(centerX, centerY, centerZ);
-    mesh.rotation.x = Math.PI / 2;
-    mesh.name = 'VisualEllipseBar';
-    parent.add(mesh);
+        const railOffset = 0.22;
+        const railRadius = 0.03;
+        const railMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.6, roughness: 0.35 });
+    const right = new THREE.Vector3(1, 0, 0);
+        const innerCurve = ellipseCurve.getSpacedPoints(128).map(p => p.clone().addScaledVector(right, -railOffset));
+        const outerCurve = ellipseCurve.getSpacedPoints(128).map(p => p.clone().addScaledVector(right, railOffset));
+        const innerTube = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(innerCurve, true), 256, railRadius, 12, true);
+        const outerTube = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(outerCurve, true), 256, railRadius, 12, true);
+        const innerRail = new THREE.Mesh(innerTube, railMat);
+        const outerRail = new THREE.Mesh(outerTube, railMat);
+        innerRail.name = 'VisualEllipseConveyor_Rail_Inner';
+        outerRail.name = 'VisualEllipseConveyor_Rail_Outer';
+        parent.add(innerRail);
+        parent.add(outerRail);
+
+        // Optional legs every N segments
+    const legsGroup = new THREE.Group();
+        legsGroup.name = 'VisualEllipseConveyor_Legs';
+        const legEvery = 16;
+    const legHeight = effectiveCenterY; // height from ground up to belt
+        for (let i = 0; i < 128; i += legEvery) {
+            const p = ellipseCurve.getPoint(i / 128);
+            const leg = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.03, Math.max(0.1, legHeight), 8),
+                new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.3, roughness: 0.6 })
+            );
+        leg.position.set(p.x, Math.max(0.05, legHeight / 2), p.z);
+            legsGroup.add(leg);
+        }
+        parent.add(legsGroup);
+    } else {
+        // Geometry and Material - legacy simple torus bar
+        const segments = 96;
+        const baseR = Math.max(radiusX, radiusZ);
+        const tubeRadius = 0.25; // Thicker like a conveyor cylinder
+        const geom = new THREE.TorusGeometry(baseR, tubeRadius, 16, segments);
+        geom.scale(radiusX / baseR, radiusZ / baseR, 1);
+        const mat = new THREE.MeshPhysicalMaterial({
+            color: 0x4a90e2,
+            metalness: 0.8,
+            roughness: 0.2,
+            clearcoat: 0.3,
+            clearcoatRoughness: 0.1,
+            transparent: false,
+            opacity: 1.0
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.set(centerX, centerY, centerZ);
+        mesh.rotation.x = Math.PI / 2;
+        mesh.name = 'VisualEllipseBar';
+        parent.add(mesh);
+    }
 }
 
 // Position stations that reference 11401 on the main loop ellipse
@@ -501,6 +515,180 @@ function findStationMesh(parent, plcAddress) {
 
 // Create a cylinder between two points
 function _createConnectionCylinder() { /* deprecated no-op */ }
+
+// ------------------------------------------------------------
+// Realistic conveyor segment builder (belt + rails + legs)
+// ------------------------------------------------------------
+function createRealisticConveyor(parent, startPoint, endPoint, name, flowType) {
+    console.log(`Creating realistic conveyor: ${name}, flowType: ${flowType}`);
+    const dx = endPoint.x - startPoint.x;
+    const dy = endPoint.y - startPoint.y;
+    const dz = endPoint.z - startPoint.z;
+    const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (length === 0) return;
+
+    // Rotated group for belt/rails only (no roll: keep up close to world Y)
+    const group = new THREE.Group();
+    group.name = `Conveyor_${name}`;
+    const forward = new THREE.Vector3(dx, dy, dz).normalize();
+    let tempUp = new THREE.Vector3(0, 1, 0);
+    // If forward nearly parallel to up, choose a different tempUp to avoid degeneracy
+    if (Math.abs(forward.dot(tempUp)) > 0.999) tempUp = new THREE.Vector3(0, 0, 1);
+    const right = new THREE.Vector3().crossVectors(tempUp, forward).normalize();
+    const up = new THREE.Vector3().crossVectors(forward, right).normalize();
+    const basis = new THREE.Matrix4().makeBasis(right, up, forward);
+    group.setRotationFromMatrix(basis);
+    group.position.set(startPoint.x, startPoint.y, startPoint.z);
+
+    // Belt slab along local Z
+    const beltWidth = 0.5;
+    const beltThickness = 0.12;
+    const beltGeom = new THREE.BoxGeometry(beltWidth, beltThickness, length);
+    let beltColor = 0x333333; // Default dark belt
+    if (flowType === 'loop_connection') beltColor = 0x2a2a2a; // Slightly darker for OSR connections
+    const beltMat = new THREE.MeshPhysicalMaterial({ color: beltColor, metalness: 0.1, roughness: 0.9 });
+    const belt = new THREE.Mesh(beltGeom, beltMat);
+    belt.position.z = length / 2;
+
+    // Rails along local Z
+    const railGeom = new THREE.CylinderGeometry(0.02, 0.02, length, 12, 1, false);
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x8a8a8a, metalness: 0.6, roughness: 0.35 });
+    const railOffset = Math.max(0.12, beltWidth / 2 - 0.06);
+    const railLeft = new THREE.Mesh(railGeom, railMat);
+    const railRight = new THREE.Mesh(railGeom, railMat);
+    railLeft.rotation.x = Math.PI / 2;
+    railRight.rotation.x = Math.PI / 2;
+    railLeft.position.set(-railOffset, 0, length / 2);
+    railRight.position.set(railOffset, 0, length / 2);
+
+    // End caps as flow markers
+    let hintColor = 0x3d5a6c;
+    if (flowType === 'source') hintColor = 0x1976d2;
+    else if (flowType === 'target') hintColor = 0xbc6c25;
+    else if (flowType === 'main') hintColor = 0x6e9075;
+    else if (flowType === 'loop_connection') hintColor = 0xff4444;
+    const capGeom = new THREE.SphereGeometry(0.05, 10, 10);
+    const capMat = new THREE.MeshStandardMaterial({ color: hintColor, metalness: 0.4, roughness: 0.5 });
+    const capA = new THREE.Mesh(capGeom, capMat);
+    const capB = new THREE.Mesh(capGeom, capMat);
+    capA.position.z = 0;
+    capB.position.z = length;
+
+    group.add(belt);
+    group.add(railLeft);
+    group.add(railRight);
+    group.add(capA);
+    group.add(capB);
+    group.userData = { type: 'conveyor', segment_name: name, flow_type: flowType, from: startPoint.name, to: endPoint.name };
+    parent.add(group);
+
+    // Legs in world space: vertical to world Y
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.3, roughness: 0.6 });
+    const footMat = new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.2, roughness: 0.7 });
+    const legSpacing = 1.5;
+    const legCount = Math.max(1, Math.floor(length / legSpacing));
+    for (let i = 0; i <= legCount; i++) {
+        const t = i / Math.max(1, legCount);
+        const worldX = startPoint.x + dx * t;
+        const worldYTop = startPoint.y + dy * t;
+        const worldZ = startPoint.z + dz * t;
+        const h = Math.max(0.12, worldYTop);
+
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, h, 10), legMat);
+        leg.position.set(worldX, h / 2, worldZ);
+        parent.add(leg);
+
+        const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.025, 12), footMat);
+        foot.position.set(worldX, 0.0125, worldZ);
+        parent.add(foot);
+    }
+}
+
+// Wrapper that chooses realistic or legacy cylinder
+function createConveyorSegment(parent, startPoint, endPoint, _segmentName, flowType = 'general', uiConfig) {
+    const DISABLED = false; // set true to hide conveyors
+    if (DISABLED) return;
+
+    const useRealistic = uiConfig?.prezone_visuals?.realisticConveyors === true;
+    if (useRealistic) {
+        return createRealisticConveyor(parent, startPoint, endPoint, _segmentName, flowType);
+    }
+
+    // Fallback to simple slab belt
+    const dx = endPoint.x - startPoint.x;
+    const dy = endPoint.y - startPoint.y;
+    const dz = endPoint.z - startPoint.z;
+    const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (length === 0) return;
+
+    // Force realistic mode for loop_connection (OSR to main loop)
+    if (flowType === 'loop_connection') {
+        console.log(`Creating realistic conveyor for OSR->Loop: ${_segmentName}`);
+        return createRealisticConveyor(parent, startPoint, endPoint, _segmentName, flowType);
+    }
+
+    let color, opacity;
+    switch (flowType) {
+        case 'source': color = 0x1976d2; opacity = 0.92; break;
+        case 'target': color = 0xbc6c25; opacity = 0.92; break;
+        case 'main': color = 0x6e9075; opacity = 0.85; break;
+        case 'loop_connection': color = 0xff4444; opacity = 0.88; break;
+        case 'straight_connection': color = 0x00ff88; opacity = 0.85; break;
+        case 'divert_connection': color = 0xffaa00; opacity = 0.85; break;
+        default: color = 0x3d5a6c; opacity = 0.7; break;
+    }
+    const group = new THREE.Group();
+    group.name = `ConveyorSegment_${_segmentName}`;
+    const forward = new THREE.Vector3(dx, dy, dz).normalize();
+    let tempUp = new THREE.Vector3(0, 1, 0);
+    if (Math.abs(forward.dot(tempUp)) > 0.999) tempUp = new THREE.Vector3(0, 0, 1);
+    const right = new THREE.Vector3().crossVectors(tempUp, forward).normalize();
+    const up = new THREE.Vector3().crossVectors(forward, right).normalize();
+    const basis = new THREE.Matrix4().makeBasis(right, up, forward);
+    group.setRotationFromMatrix(basis);
+    group.position.set(startPoint.x, startPoint.y, startPoint.z);
+
+    const beltWidth = 0.5;
+    const beltThickness = 0.12;
+    const geom = new THREE.BoxGeometry(beltWidth, beltThickness, length);
+    const mat = new THREE.MeshPhysicalMaterial({ color, metalness: 0.7, roughness: 0.35, clearcoat: 0.4, clearcoatRoughness: 0.18, reflectivity: 0.6, transparent: true, opacity });
+    const slab = new THREE.Mesh(geom, mat);
+    slab.position.z = length / 2;
+
+    group.add(slab);
+    group.userData = { type: 'conveyor_segment', segment_name: _segmentName, flow_type: flowType, from: startPoint.name, to: endPoint.name };
+    parent.add(group);
+}
+
+// ------------------------------------------------------------
+// Connect Lift Exits (PLC 216xx) to the main loop ellipse
+// ------------------------------------------------------------
+function createLiftExitToLoopConnections(parent, stations, uiConfig) {
+    const ellipseCfg = uiConfig.prezone_visuals?.ellipse;
+    if (!ellipseCfg?.position || !ellipseCfg?.dimensions) {
+        console.warn('[LiftExitToLoop] No ellipse config found, skipping connections');
+        return;
+    }
+    const ellipsePos = ellipseCfg.position;
+    const ellipseDims = ellipseCfg.dimensions;
+
+    const liftExits = stations.filter(s => s.plc_address >= 21600 && s.plc_address < 21700);
+    if (liftExits.length === 0) return;
+
+    liftExits.forEach(st => {
+        const closest = findClosestPointOnEllipse(
+            st.position.x,
+            st.position.z,
+            ellipsePos.x,
+            ellipsePos.z,
+            ellipseDims.radiusX,
+            ellipseDims.radiusZ
+        );
+        const from = { x: st.position.x, y: st.position.y || 0.15, z: st.position.z, name: `Lift Exit ${st.plc_address}` };
+        const to = { x: closest.x, y: (ellipsePos.y ?? 0.0) + 0.15, z: closest.z, name: 'Main Loop Ellipse' };
+        createConveyorSegment(parent, from, to, `LiftExit_${st.plc_address}_ToLoop`, 'loop_connection', uiConfig);
+    });
+}
 
 // Export function to update PLC stations from external modules
 export function updatePLCStationsForPickingCount(uiConfig) {
