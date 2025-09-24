@@ -2,6 +2,9 @@ import * as THREE from 'three';
 
 import { PLCStationManager } from './PLCStationManager.js';
 
+const PREZONE_ELLIPSE_OFFSET_X = 5.3;
+const PICKING_STATION_OFFSET_X = 6.0;
+
 // PLC address decoding (F L T C C)
 function decodePlc(plc) {
     const s = plc.toString().padStart(5, '0');
@@ -33,12 +36,13 @@ function updatePLCStationsForPickingStations(uiConfig) {
     const pickingStations = [];
     
     for (let i = 0; i < pickingStationsCount; i++) {
-        // Position picking diverters on a line for main loop connection
-        const diverterX = -15 + (i * 7); // Spread diverters along X axis for main loop
+    // Position picking diverters on a line for main loop connection
+    const baseX = -15 + (i * 7);
+    const diverterX = baseX + PICKING_STATION_OFFSET_X; // Spread diverters along X axis for main loop
         const diverterZ = -8; // Keep them in a line for main loop
         
-        // Position picking stations in a line like the existing Picking Station 1
-        const stationX = -15 + (i * 7); // Same X spacing as diverters but different Z
+    // Position picking stations in a line like the existing Picking Station 1
+    const stationX = baseX + PICKING_STATION_OFFSET_X; // Same X spacing as diverters but different Z
         const stationZ = -14; // Same Z as existing Picking Station 1
         
         // Add picking diverter for this station (connected to main loop)
@@ -86,6 +90,7 @@ function updatePLCStationsForPickingStations(uiConfig) {
 export function createPrezone(uiConfig, _constants) {
     const prezoneGroup = new THREE.Group();
     prezoneGroup.name = 'PrezoneGroup';
+    prezoneGroup.position.x = 1.0;
 
     if (uiConfig.plc_stations && uiConfig.plc_stations.length > 0) {
         // Update PLC stations for picking stations count
@@ -135,7 +140,7 @@ function createPickingStation(parent, uiConfig) {
 
     for (let i = 0; i < uiConfig.picking_stations; i++) {
         const adjustedIndex = i + 1;
-        const pickingX = adjustedIndex * stationFullWidth - totalPrezoneWidth / 2 + stationWidth / 2;
+    const pickingX = adjustedIndex * stationFullWidth - totalPrezoneWidth / 2 + stationWidth / 2 + PICKING_STATION_OFFSET_X;
         const pickingY = 0.25;
         const pickingZ = 0;
 
@@ -173,7 +178,8 @@ function createMultiLiftConveyorSystem(parent, uiConfig, _constants) {
     const stationWidth = 2.5, stationSpacing = 1.0, stationFullWidth = stationWidth + stationSpacing;
     const totalPrezoneWidth = uiConfig.picking_stations * stationFullWidth;
     const mainStationIndex = 1; // second station (AnimationManager logic)
-    const mainPickingX = mainStationIndex * stationFullWidth - totalPrezoneWidth / 2 + stationWidth / 2;
+    const pickingOffsetX = PICKING_STATION_OFFSET_X;
+    const mainPickingX = mainStationIndex * stationFullWidth - totalPrezoneWidth / 2 + stationWidth / 2 + pickingOffsetX;
 
     const frontOffset = 1.0;
     const targetAisle = 0;
@@ -196,7 +202,7 @@ function createMultiLiftConveyorSystem(parent, uiConfig, _constants) {
     for (let s = 0; s < uiConfig.picking_stations; s++) {
         const adjusted = s + 1;
         if (adjusted !== mainStationIndex) {
-            const stationX = adjusted * stationFullWidth - totalPrezoneWidth / 2 + stationWidth / 2;
+            const stationX = adjusted * stationFullWidth - totalPrezoneWidth / 2 + stationWidth / 2 + pickingOffsetX;
             const stationPath = [
                 { x: stationX, y: targetLevel, z: frontOffset, name: `Station ${adjusted} Forward Step` },
                 { x: liftX, y: targetLevel, z: frontOffset, name: `Station ${adjusted} Left Alignment` }
@@ -322,6 +328,8 @@ function createSimpleEllipseBar(parent, stations, uiConfig) {
         radiusZ = 0.55;
     }
 
+    centerX += PREZONE_ELLIPSE_OFFSET_X;
+
     const realistic = uiConfig?.prezone_visuals?.realisticConveyors === true;
     if (realistic) {
         // Build a belt-like elliptical loop using TubeGeometry and add inner/outer rails.
@@ -411,6 +419,7 @@ function createMainLoopConnections(parent, stations, uiConfig) {
 
     const ellipsePos = visualEllipseConfig.position;
     const ellipseDims = visualEllipseConfig.dimensions;
+    const ellipseCenterX = ellipsePos.x + PREZONE_ELLIPSE_OFFSET_X;
 
     // Find all stations that reference 11401
     const connectingStations = stations.filter(station => {
@@ -426,7 +435,7 @@ function createMainLoopConnections(parent, stations, uiConfig) {
         // Find the closest point on the ellipse to the original position
         const closestPoint = findClosestPointOnEllipse(
             originalX, originalZ, 
-            ellipsePos.x, ellipsePos.z, 
+            ellipseCenterX, ellipsePos.z, 
             ellipseDims.radiusX, ellipseDims.radiusZ
         );
         
@@ -440,7 +449,7 @@ function createMainLoopConnections(parent, stations, uiConfig) {
         }
         
         // Also update the config position for consistency
-        station.position.x = closestPoint.x;
+    station.position.x = closestPoint.x;
         station.position.y = ellipsePos.y + 0.1;
         station.position.z = closestPoint.z;
     });
@@ -671,6 +680,7 @@ function createLiftExitToLoopConnections(parent, stations, uiConfig) {
     }
     const ellipsePos = ellipseCfg.position;
     const ellipseDims = ellipseCfg.dimensions;
+    const ellipseCenterX = ellipsePos.x + PREZONE_ELLIPSE_OFFSET_X;
 
     const liftExits = stations.filter(s => s.plc_address >= 21600 && s.plc_address < 21700);
     if (liftExits.length === 0) return;
@@ -679,7 +689,7 @@ function createLiftExitToLoopConnections(parent, stations, uiConfig) {
         const closest = findClosestPointOnEllipse(
             st.position.x,
             st.position.z,
-            ellipsePos.x,
+            ellipseCenterX,
             ellipsePos.z,
             ellipseDims.radiusX,
             ellipseDims.radiusZ
